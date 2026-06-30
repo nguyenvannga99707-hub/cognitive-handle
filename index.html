@@ -174,7 +174,7 @@ async function log(type, p) {
   try {
     await fetch(`${SB_URL}/rest/v1/handle_events`,{method:'POST',
       headers:{'apikey':SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({session_id:getSid(),event_type:type,topic:p.topic||null,card_title:p.card_title||null,card_type:p.card_type||null,card_index:p.card_index??null,source:p.source||null,cards_generated:p.cards_generated||null,card_count:p.card_count??null,has_ability_alert:p.has_ability_alert??null,layer:p.layer??null,parent_card_title:p.parent_card_title||null,card_content:p.card_content||null,client_ts:Date.now()})
+      body:JSON.stringify({session_id:getSid(),event_type:type,topic:p.topic||null,card_title:p.card_title||null,card_type:p.card_type||null,card_index:p.card_index??null,source:p.source||null,cards_generated:p.cards_generated||null,card_count:p.card_count??null,has_ability_alert:p.has_ability_alert??null,layer:p.layer??null,parent_card_title:p.parent_card_title||null,card_content:p.card_content||null,passcode:p.passcode||null,client_ts:Date.now()})
     });
   }catch(e){}
 }
@@ -263,7 +263,7 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
       const ls = card.querySelector('.lock-screen');
       if(ls) ls.classList.add('active');
       // log lock view
-      log('lock_view',{topic,card_title:b.title,layer,parent_card_title:parentTitle||null,source});
+      log('lock_view',{topic,card_title:b.title,layer,parent_card_title:parentTitle||null,source,passcode:_passcode});
     }
 
     container.appendChild(block);
