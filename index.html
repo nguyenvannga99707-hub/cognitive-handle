@@ -230,10 +230,7 @@ async function callAI(topic, context) {
 
   const prompt = context
     ? `${baseRules}\n\n领域：${topic}\n\n用户正在深入理解"${context.cardTitle}"——你之前说：${context.why}\n\n往下挖一层，切出3块更深入的子骨架。必须跟"${context.cardTitle}"直接相关。每块让用户感觉"原来如此"。\n\n输出严格JSON，不要任何其他文字：\n{"blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}]}`
-    : `${baseRules}\n\n领域：${topic}\n\n切出3块入门骨架。输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}],"ability_alert":"（这个领域AI补不了的能力是什么，没有就填null）"}`;
-
-  console.log('🔄 callAI', topic, context ? 'drill' : 'search');
-  const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
+    : `${baseRules}\n\n领域：${topic}\n\n切出3块入门骨架。输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}],"ability_alert":"（这个领域AI补不了的能力是什么，没有就填null）"}`;const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
       {role:'system',content:'知识骨架切割助手。只输出JSON。用新手能直接感知的词。'},
@@ -241,7 +238,6 @@ async function callAI(topic, context) {
     ],temperature:0.7,max_tokens:1500})
   });
   if(!r.ok) {
-    console.error('API error', r.status, await r.text());
     throw new Error(`API ${r.status}`);
   }
   const d = await r.json();
@@ -326,29 +322,18 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
   });
 
   // 绑定所有 drill 按钮
-  const drillBtns = container.querySelectorAll('.drill-btn');
-  console.log('🔧 renderCards binding', drillBtns.length, 'drill buttons at layer', layer, 'container:', container.className);
-  drillBtns.forEach(btn => {
+  container.querySelectorAll('.drill-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      console.log('🪜 drill button clicked!', btn.dataset.cardTitle, 'layer', btn.dataset.layer);
       drillDown(this);
     });
   });
-
-  // 验证按钮 DOM 结构
-  if(drillBtns.length > 0) {
-    const b = drillBtns[0];
-    console.log('🔍 first drill btn:', {topic:b.dataset.topic, layer:b.dataset.layer, title:b.dataset.cardTitle, hasJson:!!b.dataset.cardJson});
-  }
 }
 
 // ====== 往下挖 ======
 async function drillDown(btn) {
-  console.log('⛏️ drillDown called, btn:', btn.tagName, btn.className);
   const block = btn.closest('.card-block');
   const childrenWrap = block.querySelector('.children-wrap');
-  console.log('⛏️ block:', !!block, 'childrenWrap:', !!childrenWrap, 'already active:', childrenWrap?.classList.contains('active'));
   
   if(childrenWrap.classList.contains('active')) return;
 
@@ -379,9 +364,7 @@ async function drillDown(btn) {
       });
       upStats();
     }
-  } catch(e) {
-    console.error('drillDown error', e);
-    // 静默失败——下次再点
+  } catch(e) {// 静默失败——下次再点
   } finally {
     btn.classList.remove('loading');
     btn.textContent = '🪜 再往下挖一层';
@@ -418,9 +401,7 @@ async function generate() {
       card_content: data.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
     upStats();
     document.getElementById('bottomActions').style.display='flex';
-  } catch(e) {
-    console.error('generate error:', e);
-    const fb = getDemo(topic) || {topic,blocks:[
+  } catch(e) {const fb = getDemo(topic) || {topic,blocks:[
       {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
       {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
       {title:'反馈信号',why:'没有判断标准，做对了你都不知道',type:'能力',detail:'找个你能感知的"做对了"的信号——声音、颜色变化、数字变动。这才是你的导航系统'}
@@ -442,8 +423,6 @@ function retry() {
   upStats(); window.scrollTo({top:0,behavior:'smooth'});
 }
 
-document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
-console.log('🧩 认知抓手 v3 · 三层分型 + 四层暗语锁');
-</script>
+document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});</script>
 </body>
 </html>
