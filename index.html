@@ -220,21 +220,36 @@ upStats();
 const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
 
 async function callAI(topic, context) {
-  const prompt = context
-    ? `领域：${topic}\n上下文：${context}\n\n针对这个具体知识点，切出3块更深入的子骨架。每块2-6字，必须具体、可感知。规则同上。输出JSON:{"blocks":[{"title":"","why":"","type":"知识或能力","detail":""}]}`
-    : `领域：${topic}\n切出3块入门骨架。每块过三关(判断/起步/提问)。用新手能感知到的词。输出JSON:{"topic":"","blocks":[{"title":"","why":"","type":"知识或能力","detail":""}],"ability_alert":""}`;
+  const baseRules = `你是一个"最小必要知识切割"工具。切出刚好够入门的骨架知识。
 
+规则（严格遵守）：
+1. 最多3块，不是清单。每块2-6字，用新手第一眼就能感知到的词，不要学术分类词
+2. 每块必须过三关：判断关（知道这事能不能做）、起步关（知道第一步往哪迈）、提问关（能问出对的问题）
+3. 每块必须说清"为什么没它进不了门"——说不出的就剔除
+4. 每块标注是"知识"（可问AI按需获取）还是"能力"（必须自己攒）`;
+
+  const prompt = context
+    ? `${baseRules}\n\n领域：${topic}\n\n用户正在深入理解"${context.cardTitle}"——你之前说：${context.why}\n\n往下挖一层，切出3块更深入的子骨架。必须跟"${context.cardTitle}"直接相关。每块让用户感觉"原来如此"。\n\n输出严格JSON，不要任何其他文字：\n{"blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}]}`
+    : `${baseRules}\n\n领域：${topic}\n\n切出3块入门骨架。输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}],"ability_alert":"（这个领域AI补不了的能力是什么，没有就填null）"}`;
+
+  console.log('🔄 callAI', topic, context ? 'drill' : 'search');
   const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
-      {role:'system',content:'知识骨架切割助手。只输出JSON。用新手能直接感知的词，不要学术分类词。'},
+      {role:'system',content:'知识骨架切割助手。只输出JSON。用新手能直接感知的词。'},
       {role:'user',content:prompt}
     ],temperature:0.7,max_tokens:1500})
   });
-  if(!r.ok) throw new Error(`API ${r.status}`);
+  if(!r.ok) {
+    console.error('API error', r.status, await r.text());
+    throw new Error(`API ${r.status}`);
+  }
   const d = await r.json();
-  const m = d.choices[0].message.content.match(/\{[\s\S]*\}/);
-  return m ? JSON.parse(m[0]) : {blocks:[]};
+  const raw = d.choices[0].message.content;
+  console.log('📦 raw response:', raw.slice(0, 200));
+  const m = raw.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('No JSON in response: '+raw.slice(0,100));
+  return JSON.parse(m[0]);
 }
 
 // ====== 演示数据 ======
@@ -262,6 +277,7 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
   blocks.forEach((b,i)=>{
     const block = document.createElement('div');
     block.className = 'card-block layer-'+layer;
+    const cardJsonEncoded = encodeURIComponent(JSON.stringify(b));
     block.innerHTML = `
       <div class="handle-card" data-card-title="${b.title}" data-card-type="${b.type}" data-layer="${layer}">
         <div class="card-header">
@@ -273,7 +289,7 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
           <div class="expand-inner"><strong>🔍 往下：</strong><br>${b.detail}</div>
         </div>
         ${layer < _maxFreeLayers
-          ? '<div class="drill-btn" onclick="event.stopPropagation();drillDown(this,'+layer+',\''+b.title.replace(/'/g,"\\'")+'\',\''+topic.replace(/'/g,"\\'")+'\',\''+JSON.stringify(b).replace(/'/g,"\\'")+'\')">🪜 再往下挖一层</div>'
+          ? `<div class="drill-btn" data-topic="${topic}" data-layer="${layer}" data-card-title="${b.title}" data-card-json="${cardJsonEncoded}">🪜 再往下挖一层</div>`
           : layer >= _maxFreeLayers && layer < (_maxFreeLayers+1)
             ? '<div class="lock-screen"><div class="lock-icon">🔒</div><div class="lock-msg">你到了免费层的边界。<br>第四层需要一把钥匙。</div><div class="lock-code">暗语：'+_passcode+'</div><div class="lock-msg" style="margin-top:8px;font-size:0.75rem">把这个暗语发给创建者<br>验证你是真想看第四层的人</div></div>'
             : '<div class="lock-screen" style="border-color:rgba(52,211,153,0.3)"><div class="lock-icon">🏁</div><div class="lock-msg" style="color:#34d399">探索者，先到这里吧。<br>你已经挖了 '+layer+' 层——够深了。</div></div>'}
@@ -308,24 +324,35 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
 
     container.appendChild(block);
   });
+
+  // 绑定所有 drill 按钮
+  container.querySelectorAll('.drill-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      drillDown(this);
+    });
+  });
 }
 
 // ====== 往下挖 ======
-window.drillDown = async function(btn, layer, cardTitle, topic, cardJson) {
+async function drillDown(btn) {
   const block = btn.closest('.card-block');
   const childrenWrap = block.querySelector('.children-wrap');
   
-  // 已加载过
   if(childrenWrap.classList.contains('active')) return;
 
+  const layer = parseInt(btn.dataset.layer);
+  const topic = btn.dataset.topic;
+  const cardTitle = btn.dataset.cardTitle;
+  const cardJson = decodeURIComponent(btn.dataset.cardJson);
+  
   btn.classList.add('loading');
   btn.textContent = '正在挖...';
 
   try {
     let parsed;
     try { parsed = JSON.parse(cardJson); } catch(e) { parsed = {title:cardTitle}; }
-    const context = `用户想深入了解"${cardTitle}"——你之前的解释是：${parsed.why||''} ${parsed.detail||''}`;
-    const data = await callAI(topic, context);
+    const data = await callAI(topic, {cardTitle:parsed.title||cardTitle, why:parsed.why||''});
     const nextLayer = layer + 1;
 
     if(data.blocks && data.blocks.length > 0) {
@@ -333,7 +360,6 @@ window.drillDown = async function(btn, layer, cardTitle, topic, cardJson) {
       childrenWrap.classList.add('active');
       _dc++; localStorage.setItem('ch_dc',_dc);
 
-      // 记录生成事件（含完整内容）
       log('card_drilldown',{
         topic, layer:nextLayer, parent_card_title:cardTitle, source:'api',
         cards_generated: data.blocks.map(b=>b.title),
@@ -344,11 +370,12 @@ window.drillDown = async function(btn, layer, cardTitle, topic, cardJson) {
     }
   } catch(e) {
     console.error('drillDown error', e);
+    // 静默失败——下次再点
   } finally {
     btn.classList.remove('loading');
     btn.textContent = '🪜 再往下挖一层';
   }
-};
+}
 
 // ====== 主流程 ======
 async function generate() {
@@ -381,6 +408,7 @@ async function generate() {
     upStats();
     document.getElementById('bottomActions').style.display='flex';
   } catch(e) {
+    console.error('generate error:', e);
     const fb = getDemo(topic) || {topic,blocks:[
       {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
       {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
