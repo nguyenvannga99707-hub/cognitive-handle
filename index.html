@@ -145,7 +145,6 @@
     margin-bottom: 16px;
   }
 
-  /* ---- 展开区 ---- */
   .card-expand {
     max-height: 0; overflow: hidden;
     transition: max-height 0.4s ease, margin-top 0.3s ease;
@@ -161,7 +160,6 @@
     display: flex; align-items: center; gap: 4px;
   }
 
-  /* ---- 全局提示 ---- */
   .meta-note {
     margin-top: 32px; padding: 16px 20px;
     background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
@@ -171,18 +169,28 @@
   .meta-note.active { display: block; }
   .meta-note strong { color: #fca5a5; }
 
-  /* ---- 底部操作 ---- */
+  /* ---- 统计条 ---- */
+  .stats-bar {
+    margin-top: 24px; padding: 12px 16px;
+    background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15);
+    border-radius: 10px; font-size: 0.75rem; color: #a78bfa;
+    display: none; align-items: center; gap: 16px; justify-content: center; flex-wrap: wrap;
+  }
+  .stats-bar.active { display: flex; }
+  .stats-bar span { opacity: 0.7; }
+  .stats-bar strong { color: #c4b5fd; font-size: 0.85rem; }
+
   .bottom-actions {
-    margin-top: 36px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
   }
   .btn-sm {
-    padding: 10px 20px; border-radius: 10px; border: 1px solid #2a2a3e;
-    background: transparent; color: #a0a0b0; font-size: 0.85rem;
+    padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2a3e;
+    background: transparent; color: #a0a0b0; font-size: 0.8rem;
     cursor: pointer; transition: all 0.2s;
   }
   .btn-sm:hover { border-color: #6366f1; color: #c4b5fd; }
+  .btn-sm.primary { border-color: #6366f1; color: #a78bfa; }
 
-  /* ---- 响应式 ---- */
   @media (max-width: 600px) {
     .title { font-size: 1.5rem; }
     .input-wrap { flex-direction: column; }
@@ -195,7 +203,7 @@
 <div class="stars" id="stars"></div>
 
 <div class="main">
-  <div class="title">认知抓手</div>
+  <div class="title">认知抓手 v2.0</div>
   <div class="subtitle">扔一个领域进来，立刻看到三块骨架<br>够你入门，够你开口，够你问对问题</div>
 
   <div class="input-wrap">
@@ -211,8 +219,13 @@
   <div class="result-wrap" id="result"></div>
   <div class="meta-note" id="metaNote"></div>
 
+  <div class="stats-bar" id="statsBar">
+    <span>📊 本会话：<strong id="statSearches">0</strong> 次搜索 · <strong id="statExpands">0</strong> 次展开</span>
+  </div>
+
   <div class="bottom-actions" id="bottomActions" style="display:none">
     <button class="btn-sm" onclick="retry()">🔄 换一个领域</button>
+    <button class="btn-sm primary" onclick="downloadData()">📥 导出数据</button>
   </div>
 </div>
 
@@ -230,6 +243,77 @@
     `;
     stars.appendChild(s);
   }
+})();
+
+// ====== 数据层（localStorage） ======
+const DATA_KEY = 'cognitive_handle_events';
+
+function getSessionId() {
+  let sid = localStorage.getItem('ch_session_id');
+  if (!sid) {
+    sid = 'ch_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+    localStorage.setItem('ch_session_id', sid);
+  }
+  return sid;
+}
+
+function logEvent(type, payload) {
+  const events = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+  events.push({
+    session_id: getSessionId(),
+    timestamp: new Date().toISOString(),
+    type: type,
+    ...payload
+  });
+  // 保留最近 1000 条，防爆
+  if (events.length > 1000) events.splice(0, events.length - 1000);
+  localStorage.setItem(DATA_KEY, JSON.stringify(events));
+  updateStats(type);
+}
+
+function getEvents() {
+  return JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+}
+
+function getSessionStats() {
+  const sid = getSessionId();
+  const events = getEvents().filter(e => e.session_id === sid);
+  return {
+    searches: events.filter(e => e.type === 'search').length,
+    expands: events.filter(e => e.type === 'card_expand').length,
+    collapses: events.filter(e => e.type === 'card_collapse').length,
+    topics: [...new Set(events.filter(e => e.type === 'search').map(e => e.topic))]
+  };
+}
+
+function updateStats(type) {
+  const stats = getSessionStats();
+  document.getElementById('statSearches').textContent = stats.searches;
+  document.getElementById('statExpands').textContent = stats.expands;
+  if (stats.searches > 0 || stats.expands > 0) {
+    document.getElementById('statsBar').classList.add('active');
+  }
+}
+
+function downloadData() {
+  const all = getEvents();
+  const sid = getSessionId();
+  // 默认导出本会话，加 all 参数导出全部
+  const sessionOnly = all.filter(e => e.session_id === sid);
+  const blob = new Blob([JSON.stringify(sessionOnly, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cognitive-handle-${sid}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  // 同时 log
+  logEvent('data_export', { event_count: sessionOnly.length, scope: 'session' });
+}
+
+// 页面加载时恢复统计
+(function(){
+  updateStats();
 })();
 
 // ====== DeepSeek API ======
@@ -251,7 +335,7 @@ async function callDeepSeek(topic) {
   "topic": "${topic}",
   "blocks": [
     {
-      "title": "骨架名称（简短，2-6字）",
+      "title": "骨架名称（简短，2-6字，用新手第一次碰到这东西时能直接感知到的词，不要学术分类词）",
       "why": "为什么没它进不了门（一句话，口语化，像朋友聊天）",
       "type": "知识 或 能力",
       "detail": "展开后你还会发现什么（2-3句，让人看了想点进去探索）"
@@ -276,13 +360,12 @@ async function callDeepSeek(topic) {
   if (!resp.ok) throw new Error(`API error: ${resp.status}`);
   const data = await resp.json();
   const content = data.choices[0].message.content;
-  // 提取 JSON
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in response');
   return JSON.parse(jsonMatch[0]);
 }
 
-// ====== 备选：演示模式（API不可用时） ======
+// ====== 演示模式 ======
 function getDemoData(topic) {
   const demos = {
     '魔方': {
@@ -313,21 +396,19 @@ function getDemoData(topic) {
       ability_alert: '情绪控制——看着账户跌30%还能睡得着。这不是知识，是经历过多轮牛熊之后身体才知道的事'
     }
   };
-  // 模糊匹配
   const key = Object.keys(demos).find(k => topic.includes(k));
   return key ? demos[key] : null;
 }
 
 // ====== 渲染 ======
-function render(data) {
+function render(data, source) {
   const result = document.getElementById('result');
   const metaNote = document.getElementById('metaNote');
-  const bottomActions = document.getElementById('bottomActions');
 
   let html = '';
   data.blocks.forEach((b, i) => {
     html += `
-      <div class="handle-card" onclick="this.classList.toggle('expanded')">
+      <div class="handle-card" data-card-title="${b.title}" data-card-type="${b.type}">
         <div class="card-header">
           <span class="card-number">骨架 ${i+1}/3</span>
           <span class="card-tag ${b.type === '知识' ? 'tag-knowledge' : 'tag-ability'}">${b.type}</span>
@@ -353,10 +434,11 @@ function render(data) {
     metaNote.classList.remove('active');
   }
 
-  bottomActions.style.display = 'flex';
+  document.getElementById('bottomActions').style.display = 'flex';
 
-  // 依次动画入场
+  // 绑定点展事件 + 数据日志
   document.querySelectorAll('.handle-card').forEach((card, i) => {
+    // 入场动画
     card.style.opacity = '0';
     card.style.transform = 'translateY(20px)';
     setTimeout(() => {
@@ -364,7 +446,36 @@ function render(data) {
       card.style.opacity = '1';
       card.style.transform = 'translateY(0)';
     }, i * 120);
+
+    // 点击事件（替换 onclick）
+    card.addEventListener('click', function() {
+      const wasExpanded = this.classList.contains('expanded');
+      this.classList.toggle('expanded');
+      const nowExpanded = this.classList.contains('expanded');
+
+      const cardTitle = this.dataset.cardTitle;
+      const cardType = this.dataset.cardType;
+
+      logEvent(nowExpanded ? 'card_expand' : 'card_collapse', {
+        topic: data.topic,
+        card_title: cardTitle,
+        card_type: cardType,
+        card_index: i,
+        source: source
+      });
+    });
   });
+
+  // 查询日志
+  logEvent('search', {
+    topic: data.topic,
+    source: source,
+    cards: data.blocks.map(b => b.title),
+    card_count: data.blocks.length,
+    has_ability_alert: !!data.ability_alert
+  });
+
+  updateStats();
 }
 
 // ====== 主流程 ======
@@ -377,41 +488,32 @@ async function generate() {
   const loading = document.getElementById('loading');
   const result = document.getElementById('result');
   const metaNote = document.getElementById('metaNote');
-  const bottomActions = document.getElementById('bottomActions');
 
   // 重置状态
   result.classList.remove('active');
   result.innerHTML = '';
   metaNote.classList.remove('active');
-  bottomActions.style.display = 'none';
+  document.getElementById('bottomActions').style.display = 'none';
 
   btn.classList.add('loading');
   btn.textContent = '切骨中...';
   loading.classList.add('active');
 
   try {
-    // 先试 Demo 数据（秒出），再试 API
     let data = getDemoData(topic);
     let source = 'demo';
     if (!data) {
       data = await callDeepSeek(topic);
       source = 'api';
     }
-    render(data);
-
-    // API 模式下标记
-    if (source === 'api' && data.blocks.length === 3) {
-      // 如果 API 返回的数据也符合格式，直接渲染
-    }
+    render(data, source);
   } catch (err) {
     console.error(err);
-    // Fallback: 用泛化提示
     const data = getDemoData(topic);
     if (data) {
-      render(data);
+      render(data, 'demo_fallback');
     } else {
-      // 彻底兜底
-      render({
+      const fallback = {
         topic,
         blocks: [
           { title: '基础操作', why: '不会动手，你连第一步都迈不出去。先搞清楚"最基础的那个动作"是什么', type: '知识', detail: '别急着找教程。先摸清楚最基本的互动方式——如果是工具，打开它；如果是技能，做一个最简单的动作；如果是知识，找一个最核心的概念' },
@@ -419,7 +521,8 @@ async function generate() {
           { title: '反馈信号', why: '没有判断标准，你做了也白做——不知道自己是对是错，练再多也是原地踏步', type: '能力', detail: '找到一个你能感知到的"做对了"的信号——声音、颜色变化、数字变动、别人的反应。这个信号比任何教程都重要——它是你自己的导航系统' }
         ],
         ability_alert: '判断力——知道"我做到什么程度算够了"。AI可以告诉你标准，但只有你自己知道自己的手感和节奏'
-      });
+      };
+      render(fallback, 'fallback');
     }
   } finally {
     btn.classList.remove('loading');
@@ -434,6 +537,7 @@ function retry() {
   document.getElementById('result').classList.remove('active');
   document.getElementById('metaNote').classList.remove('active');
   document.getElementById('bottomActions').style.display = 'none';
+  document.getElementById('statsBar').classList.remove('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -442,8 +546,7 @@ document.getElementById('topicInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') generate();
 });
 
-// 预加载演示：输入"魔方"试试
-console.log('🧩 认知抓手已就绪。试试输入"魔方"、"健身"、"价值投资"');
+console.log('🧩 认知抓手 v2.0 已就绪 · 所有交互数据已开始记录');
 </script>
 </body>
 </html>
