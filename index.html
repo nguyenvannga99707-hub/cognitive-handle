@@ -418,7 +418,6 @@ async function generate() {
         card_content: fb.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
       upStats();
       document.getElementById('bottomActions').style.display='flex';
-    }
   } finally {
     btn.classList.remove('loading'); btn.textContent='🔍 摸门'; loading.classList.remove('active');
   }
