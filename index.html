@@ -132,7 +132,7 @@
 
   <div class="input-wrap">
     <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他…" autofocus>
-    <button class="btn-go" id="btnGo" onclick="generate()">🔍 摸门</button>
+    <button class="btn-go" id="btnGo">🔍 摸门</button>
   </div>
 
   <div class="loading-indicator" id="loading">
@@ -364,7 +364,8 @@ async function drillDown(btn) {
       });
       upStats();
     }
-  } catch(e) {// 静默失败——下次再点
+  } catch(e) {
+    log('drilldown_error',{topic, layer:layer+1, parent_card_title:cardTitle, error_msg:e.message||'unknown', source:'api'});
   } finally {
     btn.classList.remove('loading');
     btn.textContent = '🪜 再往下挖一层';
@@ -397,17 +398,27 @@ async function generate() {
     }
 
     _sc++; localStorage.setItem('ch_sc',_sc);
-    log('search',{topic,source,cards_generated:data.blocks.map(b=>b.title),card_count:data.blocks.length,has_ability_alert:!!data.ability_alert,layer:1,
+    log('search',{topic,source,cards_generated:data.blocks.map(b=>b.title),card_count:data.blocks.length,has_ability_alert:!!data.ability_alert,layer:1,passcode:_passcode,
       card_content: data.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
     upStats();
     document.getElementById('bottomActions').style.display='flex';
-  } catch(e) {const fb = getDemo(topic) || {topic,blocks:[
-      {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
-      {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
-      {title:'反馈信号',why:'没有判断标准，做对了你都不知道',type:'能力',detail:'找个你能感知的"做对了"的信号——声音、颜色变化、数字变动。这才是你的导航系统'}
-    ],ability_alert:'判断力——知道自己做到什么程度算够了'};
-    renderCards(result, fb.blocks, topic, 1, null, 'fallback');
-    result.classList.add('active'); mn.innerHTML=`<strong>⚠️ AI补不了的：</strong>${fb.ability_alert}`; mn.classList.add('active');
+  } catch(e) {
+      // 记录失败原因
+      log('search_error',{topic,error_msg:e.message||'unknown',source:'api'});
+      const fb = getDemo(topic) || {topic,blocks:[
+        {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
+        {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
+        {title:'反馈信号',why:'没有判断标准，做对了你都不知道',type:'能力',detail:'找个你能感知的"做对了"的信号——声音、颜色变化、数字变动。这才是你的导航系统'}
+      ],ability_alert:'判断力——知道自己做到什么程度算够了'};
+      renderCards(result, fb.blocks, topic, 1, null, 'fallback');
+      result.classList.add('active');
+      if(fb.ability_alert){mn.innerHTML='<strong>⚠️ AI补不了的：</strong>'+fb.ability_alert;mn.classList.add('active')}
+      _sc++; localStorage.setItem('ch_sc',_sc);
+      log('search',{topic,source:'fallback',cards_generated:fb.blocks.map(b=>b.title),card_count:fb.blocks.length,has_ability_alert:!!fb.ability_alert,layer:1,passcode:_passcode,
+        card_content: fb.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
+      upStats();
+      document.getElementById('bottomActions').style.display='flex';
+    }
   } finally {
     btn.classList.remove('loading'); btn.textContent='🔍 摸门'; loading.classList.remove('active');
   }
@@ -423,6 +434,8 @@ function retry() {
   upStats(); window.scrollTo({top:0,behavior:'smooth'});
 }
 
-document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});</script>
+document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
+document.getElementById('btnGo').addEventListener('click',generate);
+log('session_start',{});</script>
 </body>
 </html>
