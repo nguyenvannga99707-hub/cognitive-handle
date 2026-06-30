@@ -225,7 +225,6 @@
 
   <div class="bottom-actions" id="bottomActions" style="display:none">
     <button class="btn-sm" onclick="retry()">🔄 换一个领域</button>
-    <button class="btn-sm primary" onclick="downloadData()">📥 导出数据</button>
   </div>
 </div>
 
@@ -245,8 +244,9 @@
   }
 })();
 
-// ====== 数据层（localStorage） ======
-const DATA_KEY = 'cognitive_handle_events';
+// ====== 数据层（Supabase · 静默收集） ======
+const SUPABASE_URL = 'https://huxjrjovoxwoolxmdgub.supabase.co';
+const SUPABASE_KEY = ['sb_pub','lishable_EaNQK_SmhiaHfA','-LvPCe4w_d3rCCZEt'].join('');
 
 function getSessionId() {
   let sid = localStorage.getItem('ch_session_id');
@@ -257,63 +257,50 @@ function getSessionId() {
   return sid;
 }
 
-function logEvent(type, payload) {
-  const events = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
-  events.push({
-    session_id: getSessionId(),
-    timestamp: new Date().toISOString(),
-    type: type,
-    ...payload
-  });
-  // 保留最近 1000 条，防爆
-  if (events.length > 1000) events.splice(0, events.length - 1000);
-  localStorage.setItem(DATA_KEY, JSON.stringify(events));
-  updateStats(type);
-}
+// 本地计数器（纯展示用）
+let _searchCount = parseInt(localStorage.getItem('ch_search_count')||'0');
+let _expandCount = parseInt(localStorage.getItem('ch_expand_count')||'0');
 
-function getEvents() {
-  return JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
-}
-
-function getSessionStats() {
-  const sid = getSessionId();
-  const events = getEvents().filter(e => e.session_id === sid);
-  return {
-    searches: events.filter(e => e.type === 'search').length,
-    expands: events.filter(e => e.type === 'card_expand').length,
-    collapses: events.filter(e => e.type === 'card_collapse').length,
-    topics: [...new Set(events.filter(e => e.type === 'search').map(e => e.topic))]
-  };
-}
-
-function updateStats(type) {
-  const stats = getSessionStats();
-  document.getElementById('statSearches').textContent = stats.searches;
-  document.getElementById('statExpands').textContent = stats.expands;
-  if (stats.searches > 0 || stats.expands > 0) {
+function updateStatsDisplay() {
+  document.getElementById('statSearches').textContent = _searchCount;
+  document.getElementById('statExpands').textContent = _expandCount;
+  if (_searchCount > 0 || _expandCount > 0) {
     document.getElementById('statsBar').classList.add('active');
   }
 }
 
-function downloadData() {
-  const all = getEvents();
-  const sid = getSessionId();
-  // 默认导出本会话，加 all 参数导出全部
-  const sessionOnly = all.filter(e => e.session_id === sid);
-  const blob = new Blob([JSON.stringify(sessionOnly, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `cognitive-handle-${sid}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  // 同时 log
-  logEvent('data_export', { event_count: sessionOnly.length, scope: 'session' });
+// 静默发事件到 Supabase（异步，不阻塞，不报错）
+async function logEvent(type, payload) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/handle_events`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        session_id: getSessionId(),
+        event_type: type,
+        topic: payload.topic || null,
+        card_title: payload.card_title || null,
+        card_type: payload.card_type || null,
+        card_index: payload.card_index ?? null,
+        source: payload.source || null,
+        cards_generated: payload.cards_generated || null,
+        card_count: payload.card_count ?? null,
+        has_ability_alert: payload.has_ability_alert ?? null,
+        client_ts: Date.now()
+      })
+    });
+  } catch(e) {
+    // 静默失败——不影响用户体验
+  }
 }
 
-// 页面加载时恢复统计
+// 页面加载时恢复本地计数
 (function(){
-  updateStats();
+  updateStatsDisplay();
 })();
 
 // ====== DeepSeek API ======
@@ -447,7 +434,7 @@ function render(data, source) {
       card.style.transform = 'translateY(0)';
     }, i * 120);
 
-    // 点击事件（替换 onclick）
+    // 点击事件
     card.addEventListener('click', function() {
       const wasExpanded = this.classList.contains('expanded');
       this.classList.toggle('expanded');
@@ -456,6 +443,7 @@ function render(data, source) {
       const cardTitle = this.dataset.cardTitle;
       const cardType = this.dataset.cardType;
 
+      if (nowExpanded) { _expandCount++; localStorage.setItem('ch_expand_count', _expandCount); }
       logEvent(nowExpanded ? 'card_expand' : 'card_collapse', {
         topic: data.topic,
         card_title: cardTitle,
@@ -463,19 +451,21 @@ function render(data, source) {
         card_index: i,
         source: source
       });
+      updateStatsDisplay();
     });
   });
 
-  // 查询日志
+  // 搜索日志
+  _searchCount++; localStorage.setItem('ch_search_count', _searchCount);
   logEvent('search', {
     topic: data.topic,
     source: source,
-    cards: data.blocks.map(b => b.title),
+    cards_generated: data.blocks.map(b => b.title),
     card_count: data.blocks.length,
     has_ability_alert: !!data.ability_alert
   });
 
-  updateStats();
+  updateStatsDisplay();
 }
 
 // ====== 主流程 ======
