@@ -132,7 +132,7 @@
 
   <div class="input-wrap">
     <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他…" autofocus>
-    <button class="btn-go" id="btnGo">🔍 摸门</button>
+    <button class="btn-go" id="btnGo" onclick="generate()">🔍 摸门</button>
   </div>
 
   <div class="loading-indicator" id="loading">
@@ -435,7 +435,6 @@ function retry() {
 }
 
 document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
-document.getElementById('btnGo').addEventListener('click',generate);
 log('session_start',{});</script>
 </body>
 </html>
