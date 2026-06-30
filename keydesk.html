@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗语验证 · 钥匙台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0a0a0f; color: #e0e0e0;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  }
+  .main { width: 100%; max-width: 640px; padding: 60px 20px; }
+  h1 { font-size: 1.4rem; color: #f59e0b; margin-bottom: 8px; }
+  .sub { font-size: 0.8rem; color: #64748b; margin-bottom: 32px; }
+
+  .input-row { display: flex; gap: 10px; margin-bottom: 32px; }
+  .input-row input {
+    flex: 1; padding: 14px 18px; background: #1a1a2e; border: 1px solid #2a2a3e;
+    border-radius: 12px; color: #e0e0e0; font-size: 1rem; font-family: monospace; letter-spacing: 0.05em;
+    outline: none; transition: border-color 0.3s;
+  }
+  .input-row input:focus { border-color: #f59e0b; }
+  .input-row input::placeholder { color: #4a4a5e; letter-spacing: 0; }
+  .btn-verify {
+    padding: 14px 24px; background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: none; border-radius: 12px; color: #0a0a0f; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: transform 0.2s;
+  }
+  .btn-verify:hover { transform: translateY(-1px); }
+
+  .result { display: none; }
+  .result.active { display: block; }
+
+  .path-card {
+    background: #141428; border: 1px solid #2a2a3e; border-radius: 14px;
+    padding: 20px 24px; margin-bottom: 16px;
+  }
+  .path-topic { font-size: 1.1rem; font-weight: 700; color: #f0f0f0; margin-bottom: 4px; }
+  .path-session { font-size: 0.7rem; color: #64748b; font-family: monospace; margin-bottom: 16px; }
+
+  .layer-path { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .layer-step { font-size: 0.82rem; color: #94a3b8; padding: 6px 12px;
+    background: #0e0e1c; border-radius: 8px; border-left: 2px solid #6366f1; }
+  .layer-step .arrow { color: #6366f1; font-weight: 700; margin-right: 4px; }
+
+  .link-box {
+    background: #0e0e1c; border: 1px solid #f59e0b; border-radius: 12px;
+    padding: 16px 20px; margin-top: 16px;
+  }
+  .link-label { font-size: 0.75rem; color: #f59e0b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .link-url { font-size: 0.8rem; color: #fbbf24; word-break: break-all; font-family: monospace;
+    background: rgba(245,158,11,0.08); padding: 10px; border-radius: 8px; display: block; margin-bottom: 10px; }
+  .btn-copy {
+    padding: 8px 16px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 8px; color: #f59e0b; font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-copy:hover { background: rgba(245,158,11,0.25); }
+
+  .not-found { padding: 20px; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 12px; color: #f87171; font-size: 0.85rem; }
+
+  .loading { display: none; color: #f59e0b; font-size: 0.85rem; text-align: center; padding: 20px; }
+  .loading.show { display: block; }
+</style>
+</head>
+<body>
+<div class="main">
+  <h1>🔑 钥匙台</h1>
+  <div class="sub">有人把暗语发给你了？贴进来，看他的路径，给他续命链接。</div>
+
+  <div class="input-row">
+    <input type="text" id="passInput" placeholder="贴入暗语，如 CH-7K2M9X" autofocus>
+    <button class="btn-verify" onclick="verify()">验证</button>
+  </div>
+
+  <div class="loading" id="loading">查询中…</div>
+  <div class="result" id="result"></div>
+</div>
+
+<script>
+const SB_URL = 'https://huxjrjovoxwoolxmdgub.supabase.co';
+const SB_KEY = ['sb_pub','lishable_EaNQK_SmhiaHfA','-LvPCe4w_d3rCCZEt'].join('');
+const HANDLE_APP = 'https://nguyenvannga99707-hub.github.io/cognitive-handle/';
+
+async function verify() {
+  const code = document.getElementById('passInput').value.trim().toUpperCase();
+  if (!code) return;
+
+  const loading = document.getElementById('loading');
+  const result = document.getElementById('result');
+  loading.classList.add('show'); result.classList.remove('active'); result.innerHTML = '';
+
+  try {
+    // 查这个 passcode 的所有事件
+    const r = await fetch(`${SB_URL}/rest/v1/handle_events?select=*&passcode=eq.${encodeURIComponent(code)}&order=created_at.asc`, {
+      headers: { 'apikey': SB_KEY }
+    });
+    const events = await r.json();
+
+    if (!events || events.length === 0) {
+      result.innerHTML = '<div class="not-found">🔍 没找到这个暗语。确认一下有没有打错。</div>';
+      result.classList.add('active');
+      loading.classList.remove('show');
+      return;
+    }
+
+    const sid = events[0].session_id;
+    const topic = events[0].topic;
+
+    // 查整个 session 的所有 search + drilldown + expand 事件
+    const r2 = await fetch(`${SB_URL}/rest/v1/handle_events?select=*&session_id=eq.${encodeURIComponent(sid)}&order=created_at.asc`, {
+      headers: { 'apikey': SB_KEY }
+    });
+    const allEvents = await r2.json();
+
+    // 构建路径展示
+    const searches = allEvents.filter(e => e.event_type === 'search');
+    const drilldowns = allEvents.filter(e => e.event_type === 'card_drilldown');
+    const expands = allEvents.filter(e => e.event_type === 'card_expand');
+    const lockViews = allEvents.filter(e => e.event_type === 'lock_view');
+
+    let html = `<div class="path-card">
+      <div class="path-topic">📌 ${topic || '未知领域'}</div>
+      <div class="path-session">session: ${sid}</div>
+      <div class="layer-path">`;
+
+    // 第一层
+    if (searches.length > 0) {
+      const cards = searches[0].cards_generated || [];
+      html += `<div class="layer-step"><span class="arrow">L1</span> ${cards.join(' → ')}</div>`;
+    }
+
+    // 深挖层
+    drilldowns.forEach(d => {
+      const cards = d.cards_generated || [];
+      html += `<div class="layer-step"><span class="arrow">L${d.layer}</span> ${d.parent_card_title} ▸ ${cards.join(' → ')}</div>`;
+    });
+
+    // 展开记录
+    html += `</div>
+      <div style="font-size:0.75rem;color:#64748b;margin-top:8px">
+        📊 展开 ${expands.length} 次 · 深挖 ${drilldowns.length} 次 · 锁屏 ${lockViews.length} 次
+      </div>`;
+
+    // 最近一次深挖到的层
+    const maxLayer = drilldowns.length > 0 ? Math.max(...drilldowns.map(d => d.layer)) : 1;
+    const lastCard = drilldowns.length > 0 ? drilldowns[drilldowns.length-1].parent_card_title : '';
+
+    html += `</div>`;
+
+    // 生成续命链接
+    const unlockToken = btoa(`${sid}:${code}:7`);
+    const linkUrl = `${HANDLE_APP}?session=${encodeURIComponent(sid)}&passcode=${encodeURIComponent(code)}&unlock=7`;
+
+    html += `<div class="link-box">
+      <div class="link-label">🔗 续命链接（第4-7层解锁）</div>
+      <div class="link-url">${linkUrl}</div>
+      <button class="btn-copy" onclick="copyLink(this, '${linkUrl.replace(/'/g, "\\'")}')">📋 复制链接</button>
+      <div style="font-size:0.7rem;color:#64748b;margin-top:8px">
+        对方点开此链接后，可从第${maxLayer+1}层继续向下挖到第7层。<br>
+        已走到：${topic} · ${lastCard || '入口'}（第${maxLayer}层）
+      </div>
+    </div>`;
+
+    result.innerHTML = html;
+    result.classList.add('active');
+
+  } catch(e) {
+    result.innerHTML = '<div class="not-found">⚠️ 查询出错：' + e.message + '</div>';
+    result.classList.add('active');
+  } finally {
+    loading.classList.remove('show');
+  }
+}
+
+function copyLink(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => { btn.textContent = '📋 复制链接'; }, 2000);
+  });
+}
+
+// 回车
+document.getElementById('passInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verify();
+});
+</script>
+</body>
+</html>

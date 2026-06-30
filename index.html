@@ -168,6 +168,42 @@ function getSid() {
 }
 
 let _sc=parseInt(localStorage.getItem('ch_sc')||'0'), _ec=parseInt(localStorage.getItem('ch_ec')||'0'), _dc=parseInt(localStorage.getItem('ch_dc')||'0');
+let _maxFreeLayers = 3; // URL 参数可覆盖
+let _restored = false;
+
+// ====== URL 参数检测（续命链接） ======
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const session = params.get('session');
+  const passcode = params.get('passcode');
+  const unlock = parseInt(params.get('unlock') || '0');
+
+  if (session && passcode && unlock > 3) {
+    _maxFreeLayers = unlock;
+    _restored = true;
+    localStorage.setItem('ch_sid', session);
+    _passcode = passcode;
+
+    // 显示续命模式提示
+    document.querySelector('.subtitle').innerHTML = `🔓 续命模式 · 第1-${unlock}层已解锁<br>继续你之前的探索`;
+    document.querySelector('.title').textContent = '认知抓手 · 续命';
+
+    // 从 Supabase 恢复话题和路径
+    (async function restore() {
+      try {
+        const r = await fetch(`${SB_URL}/rest/v1/handle_events?select=topic&session_id=eq.${encodeURIComponent(session)}&event_type=eq.search&order=created_at.desc&limit=1`,{
+          headers:{'apikey':SB_KEY}
+        });
+        const data = await r.json();
+        if(data && data.length > 0 && data[0].topic) {
+          document.getElementById('topicInput').value = data[0].topic;
+          // 自动触发生成
+          setTimeout(() => generate(), 600);
+        }
+      } catch(e) {}
+    })();
+  }
+})();
 function upStats(){document.getElementById('statSearches').textContent=_sc;document.getElementById('statExpands').textContent=_ec;document.getElementById('statDrills').textContent=_dc;if(_sc+_ec+_dc>0)document.getElementById('statsBar').classList.add('active');}
 
 async function log(type, p) {
@@ -236,9 +272,11 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
         <div class="card-expand">
           <div class="expand-inner"><strong>🔍 往下：</strong><br>${b.detail}</div>
         </div>
-        ${layer < 3
+        ${layer < _maxFreeLayers
           ? '<div class="drill-btn" onclick="event.stopPropagation();drillDown(this,'+layer+',\''+b.title.replace(/'/g,"\\'")+'\',\''+topic.replace(/'/g,"\\'")+'\',\''+JSON.stringify(b).replace(/'/g,"\\'")+'\')">🪜 再往下挖一层</div>'
-          : '<div class="lock-screen"><div class="lock-icon">🔒</div><div class="lock-msg">你到了免费层的边界。<br>第四层需要一把钥匙。</div><div class="lock-code">暗语：'+_passcode+'</div><div class="lock-msg" style="margin-top:8px;font-size:0.75rem">把这个暗语发给创建者<br>验证你是真想看第四层的人</div></div>'}
+          : layer >= _maxFreeLayers && layer < (_maxFreeLayers+1)
+            ? '<div class="lock-screen"><div class="lock-icon">🔒</div><div class="lock-msg">你到了免费层的边界。<br>第四层需要一把钥匙。</div><div class="lock-code">暗语：'+_passcode+'</div><div class="lock-msg" style="margin-top:8px;font-size:0.75rem">把这个暗语发给创建者<br>验证你是真想看第四层的人</div></div>'
+            : '<div class="lock-screen" style="border-color:rgba(52,211,153,0.3)"><div class="lock-icon">🏁</div><div class="lock-msg" style="color:#34d399">探索者，先到这里吧。<br>你已经挖了 '+layer+' 层——够深了。</div></div>'}
       </div>
       <div class="children-wrap"></div>
     `;
@@ -258,12 +296,14 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
       upStats();
     });
 
-    // 第3层显示锁
-    if(layer >= 3) {
+    // 锁屏逻辑
+    if(layer >= _maxFreeLayers) {
       const ls = card.querySelector('.lock-screen');
       if(ls) ls.classList.add('active');
-      // log lock view
-      log('lock_view',{topic,card_title:b.title,layer,parent_card_title:parentTitle||null,source,passcode:_passcode});
+      // log lock view (只有免费层边界才记)
+      if(layer === _maxFreeLayers) {
+        log('lock_view',{topic,card_title:b.title,layer,parent_card_title:parentTitle||null,source,passcode:_passcode});
+      }
     }
 
     container.appendChild(block);
