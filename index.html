@@ -326,18 +326,29 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
   });
 
   // 绑定所有 drill 按钮
-  container.querySelectorAll('.drill-btn').forEach(btn => {
+  const drillBtns = container.querySelectorAll('.drill-btn');
+  console.log('🔧 renderCards binding', drillBtns.length, 'drill buttons at layer', layer, 'container:', container.className);
+  drillBtns.forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
+      console.log('🪜 drill button clicked!', btn.dataset.cardTitle, 'layer', btn.dataset.layer);
       drillDown(this);
     });
   });
+
+  // 验证按钮 DOM 结构
+  if(drillBtns.length > 0) {
+    const b = drillBtns[0];
+    console.log('🔍 first drill btn:', {topic:b.dataset.topic, layer:b.dataset.layer, title:b.dataset.cardTitle, hasJson:!!b.dataset.cardJson});
+  }
 }
 
 // ====== 往下挖 ======
 async function drillDown(btn) {
+  console.log('⛏️ drillDown called, btn:', btn.tagName, btn.className);
   const block = btn.closest('.card-block');
   const childrenWrap = block.querySelector('.children-wrap');
+  console.log('⛏️ block:', !!block, 'childrenWrap:', !!childrenWrap, 'already active:', childrenWrap?.classList.contains('active'));
   
   if(childrenWrap.classList.contains('active')) return;
 
