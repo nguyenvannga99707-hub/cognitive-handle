@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>认知抓手 · Cognitive Handle</title>
+<title>认知抓手 v3 · Cognitive Handle</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -11,191 +11,115 @@
     background: #0a0a0f;
     color: #e0e0e0;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex; flex-direction: column; align-items: center;
     overflow-x: hidden;
   }
+  .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .star { position: absolute; background: white; border-radius: 50%;
+    animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--delay); opacity: 0; }
+  @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:0.8} }
 
-  /* ---- 星空背景 ---- */
-  .stars {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;
-  }
-  .star {
-    position: absolute;
-    background: white;
-    border-radius: 50%;
-    animation: twinkle var(--dur) ease-in-out infinite;
-    animation-delay: var(--delay);
-    opacity: 0;
-  }
-  @keyframes twinkle {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.8; }
-  }
+  .main { position: relative; z-index: 1; width: 100%; max-width: 720px; padding: 60px 20px 80px;
+    display: flex; flex-direction: column; align-items: center; }
 
-  /* ---- 主容器 ---- */
-  .main {
-    position: relative; z-index: 1;
-    width: 100%; max-width: 700px;
-    padding: 60px 20px 80px;
-    display: flex; flex-direction: column; align-items: center;
-  }
-
-  /* ---- 标题 ---- */
-  .title {
-    font-size: 2rem; font-weight: 700;
+  .title { font-size: 2rem; font-weight: 700;
     background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
-    letter-spacing: -0.02em;
-  }
-  .subtitle {
-    font-size: 0.9rem; color: #64748b;
-    margin-bottom: 40px; text-align: center;
-  }
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  .subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 40px; text-align: center; }
 
-  /* ---- 输入区 ---- */
-  .input-wrap {
-    width: 100%; display: flex; gap: 10px; margin-bottom: 50px;
-  }
-  .input-wrap input {
-    flex: 1; padding: 16px 20px;
-    background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 14px;
-    color: #e0e0e0; font-size: 1rem;
-    outline: none; transition: border-color 0.3s;
-  }
+  .input-wrap { width: 100%; display: flex; gap: 10px; margin-bottom: 50px; }
+  .input-wrap input { flex: 1; padding: 16px 20px; background: #1a1a2e; border: 1px solid #2a2a3e;
+    border-radius: 14px; color: #e0e0e0; font-size: 1rem; outline: none; transition: border-color 0.3s; }
   .input-wrap input:focus { border-color: #a78bfa; }
   .input-wrap input::placeholder { color: #4a4a5e; }
-  .btn-go {
-    padding: 16px 28px;
-    background: linear-gradient(135deg, #8b5cf6, #6366f1);
-    border: none; border-radius: 14px;
-    color: white; font-size: 1rem; font-weight: 600;
-    cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
-  }
+  .btn-go { padding: 16px 28px; background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border: none; border-radius: 14px; color: white; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
   .btn-go:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(139,92,246,0.4); }
   .btn-go:active { transform: translateY(0); }
   .btn-go.loading { opacity: 0.6; pointer-events: none; }
 
-  /* ---- 加载动画 ---- */
-  .loading-indicator {
-    display: none; align-items: center; gap: 10px;
-    color: #8b5cf6; font-size: 0.9rem; margin-bottom: 30px;
-  }
+  .loading-indicator { display: none; align-items: center; gap: 10px; color: #8b5cf6; font-size: 0.9rem; margin-bottom: 30px; }
   .loading-indicator.active { display: flex; }
   .loading-dots { display: flex; gap: 4px; }
-  .loading-dots span {
-    width: 6px; height: 6px; background: #8b5cf6; border-radius: 50%;
-    animation: bounce 1.4s ease-in-out infinite;
-  }
+  .loading-dots span { width: 6px; height: 6px; background: #8b5cf6; border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite; }
   .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-  }
+  @keyframes bounce { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
 
-  /* ---- 结果区 ---- */
-  .result-wrap {
-    width: 100%; display: none; flex-direction: column; gap: 24px;
-  }
+  .result-wrap { width: 100%; display: none; flex-direction: column; gap: 20px; }
   .result-wrap.active { display: flex; }
 
-  /* ---- 骨架卡片 ---- */
+  /* 卡片 */
+  .card-block { display: flex; flex-direction: column; gap: 8px; }
   .handle-card {
-    background: #141428; border: 1px solid #2a2a3e;
-    border-radius: 16px; padding: 24px;
-    cursor: pointer; transition: all 0.3s ease;
-    position: relative; overflow: hidden;
+    background: #141428; border: 1px solid #2a2a3e; border-radius: 16px; padding: 20px 24px;
+    cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;
   }
-  .handle-card:hover { border-color: #4a4a6e; transform: translateY(-2px); }
-  .handle-card::before {
-    content: ''; position: absolute; top: 0; left: 0;
-    width: 100%; height: 3px;
-    background: var(--accent);
-  }
-  .handle-card:nth-child(1) { --accent: linear-gradient(90deg, #f59e0b, #f97316); }
-  .handle-card:nth-child(2) { --accent: linear-gradient(90deg, #8b5cf6, #6366f1); }
-  .handle-card:nth-child(3) { --accent: linear-gradient(90deg, #06b6d4, #3b82f6); }
+  .handle-card:hover { border-color: #4a4a6e; transform: translateY(-1px); }
+  .handle-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+  .layer-1 .handle-card::before { background: linear-gradient(90deg, #f59e0b, #f97316); }
+  .layer-2 .handle-card::before { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
+  .layer-3 .handle-card::before { background: linear-gradient(90deg, #06b6d4, #3b82f6); }
+  .layer-2 { padding-left: 20px; }
+  .layer-3 { padding-left: 40px; }
 
-  .card-header {
-    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;
-  }
-  .card-number {
-    font-size: 0.75rem; font-weight: 600; color: var(--num-color);
-    background: var(--num-bg); padding: 4px 10px; border-radius: 6px;
-  }
-  .handle-card:nth-child(1) { --num-color: #f59e0b; --num-bg: rgba(245,158,11,0.12); }
-  .handle-card:nth-child(2) { --num-color: #a78bfa; --num-bg: rgba(139,92,246,0.12); }
-  .handle-card:nth-child(3) { --num-color: #22d3ee; --num-bg: rgba(34,211,238,0.12); }
-
-  .card-tag {
-    font-size: 0.7rem; padding: 3px 8px; border-radius: 4px;
-    font-weight: 500;
-  }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .card-tag { font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
   .tag-knowledge { background: rgba(52,211,153,0.15); color: #34d399; }
   .tag-ability  { background: rgba(248,113,113,0.15); color: #f87171; }
+  .card-title { font-size: 1.1rem; font-weight: 700; color: #f0f0f0; margin-bottom: 4px; }
+  .card-why { font-size: 0.82rem; color: #94a3b8; line-height: 1.5; }
 
-  .card-title {
-    font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; color: #f0f0f0;
-  }
-  .card-why {
-    font-size: 0.85rem; color: #94a3b8; line-height: 1.5;
-    margin-bottom: 16px;
-  }
-
-  .card-expand {
-    max-height: 0; overflow: hidden;
-    transition: max-height 0.4s ease, margin-top 0.3s ease;
-  }
-  .handle-card.expanded .card-expand { max-height: 500px; margin-top: 16px; }
-  .expand-inner {
-    background: #0e0e1c; border-radius: 10px; padding: 16px;
-    font-size: 0.85rem; color: #94a3b8; line-height: 1.7;
-  }
+  .card-expand { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+  .handle-card.expanded .card-expand { max-height: 600px; margin-top: 12px; }
+  .expand-inner { background: #0e0e1c; border-radius: 10px; padding: 14px;
+    font-size: 0.82rem; color: #94a3b8; line-height: 1.7; }
   .expand-inner strong { color: #c4b5fd; }
-  .expand-hint {
-    font-size: 0.75rem; color: #6366f1; margin-top: 8px;
-    display: flex; align-items: center; gap: 4px;
-  }
 
-  .meta-note {
-    margin-top: 32px; padding: 16px 20px;
-    background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
-    border-radius: 12px; font-size: 0.85rem; color: #f87171;
-    display: none;
+  /* 往下挖按钮 */
+  .drill-btn { display: none; margin-top: 12px; padding: 10px 20px;
+    background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.3); border-radius: 10px;
+    color: #a78bfa; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .handle-card.expanded .drill-btn { display: block; }
+  .drill-btn:hover { background: rgba(139,92,246,0.2); border-color: #8b5cf6; }
+  .drill-btn.loading { opacity: 0.5; pointer-events: none; }
+
+  /* 第四层锁 */
+  .lock-screen {
+    display: none; margin-top: 12px; padding: 20px;
+    background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px;
+    text-align: center;
   }
+  .lock-screen.active { display: block; }
+  .lock-icon { font-size: 2rem; margin-bottom: 8px; }
+  .lock-msg { color: #f59e0b; font-size: 0.85rem; line-height: 1.6; }
+  .lock-code { display: inline-block; margin-top: 10px; padding: 8px 16px;
+    background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); border-radius: 8px;
+    color: #fbbf24; font-family: monospace; font-size: 1.1rem; letter-spacing: 0.1em; }
+
+  /* 子卡片容器 */
+  .children-wrap { display: none; flex-direction: column; gap: 8px; margin-top: 0; }
+  .children-wrap.active { display: flex; }
+
+  .meta-note { margin-top: 28px; padding: 14px 18px;
+    background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); border-radius: 12px;
+    font-size: 0.82rem; color: #f87171; display: none; }
   .meta-note.active { display: block; }
   .meta-note strong { color: #fca5a5; }
 
-  /* ---- 统计条 ---- */
-  .stats-bar {
-    margin-top: 24px; padding: 12px 16px;
-    background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15);
-    border-radius: 10px; font-size: 0.75rem; color: #a78bfa;
-    display: none; align-items: center; gap: 16px; justify-content: center; flex-wrap: wrap;
-  }
+  .stats-bar { margin-top: 20px; padding: 10px 14px;
+    background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); border-radius: 10px;
+    font-size: 0.72rem; color: #a78bfa; display: none; align-items: center; gap: 14px; justify-content: center; }
   .stats-bar.active { display: flex; }
-  .stats-bar span { opacity: 0.7; }
-  .stats-bar strong { color: #c4b5fd; font-size: 0.85rem; }
 
-  .bottom-actions {
-    margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-  }
-  .btn-sm {
-    padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2a3e;
-    background: transparent; color: #a0a0b0; font-size: 0.8rem;
-    cursor: pointer; transition: all 0.2s;
-  }
+  .bottom-actions { margin-top: 16px; display: flex; gap: 12px; justify-content: center; }
+  .btn-sm { padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2a3e;
+    background: transparent; color: #a0a0b0; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
   .btn-sm:hover { border-color: #6366f1; color: #c4b5fd; }
-  .btn-sm.primary { border-color: #6366f1; color: #a78bfa; }
 
-  @media (max-width: 600px) {
-    .title { font-size: 1.5rem; }
-    .input-wrap { flex-direction: column; }
-    .btn-go { width: 100%; }
-  }
+  @media (max-width: 600px) { .title { font-size: 1.5rem; } .input-wrap { flex-direction: column; } .btn-go { width: 100%; } }
 </style>
 </head>
 <body>
@@ -203,340 +127,244 @@
 <div class="stars" id="stars"></div>
 
 <div class="main">
-  <div class="title">认知抓手 v2.0</div>
-  <div class="subtitle">扔一个领域进来，立刻看到三块骨架<br>够你入门，够你开口，够你问对问题</div>
+  <div class="title">认知抓手 v3</div>
+  <div class="subtitle">三层分型 · 点一下裂三块 · 第四层暗语锁</div>
 
   <div class="input-wrap">
-    <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他、价值投资…" autofocus>
+    <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他…" autofocus>
     <button class="btn-go" id="btnGo" onclick="generate()">🔍 摸门</button>
   </div>
 
   <div class="loading-indicator" id="loading">
-    <span>正在切骨架</span>
-    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <span>正在切骨架</span><div class="loading-dots"><span></span><span></span><span></span></div>
   </div>
 
   <div class="result-wrap" id="result"></div>
   <div class="meta-note" id="metaNote"></div>
-
   <div class="stats-bar" id="statsBar">
-    <span>📊 本会话：<strong id="statSearches">0</strong> 次搜索 · <strong id="statExpands">0</strong> 次展开</span>
+    <span>📊 <strong id="statSearches">0</strong> 次搜索 · <strong id="statExpands">0</strong> 次展开 · <strong id="statDrills">0</strong> 次深挖</span>
   </div>
-
   <div class="bottom-actions" id="bottomActions" style="display:none">
     <button class="btn-sm" onclick="retry()">🔄 换一个领域</button>
   </div>
 </div>
 
 <script>
-// ====== 星空背景 ======
+// ====== 星空 ======
 (function(){
   const stars = document.getElementById('stars');
-  for (let i = 0; i < 60; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    s.style.cssText = `
-      left: ${Math.random()*100}%; top: ${Math.random()*100}%;
-      width: ${1+Math.random()*2}px; height: ${1+Math.random()*2}px;
-      --dur: ${2+Math.random()*4}s; --delay: ${Math.random()*4}s;
-    `;
-    stars.appendChild(s);
-  }
+  for (let i=0;i<60;i++){const s=document.createElement('div');s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;`;stars.appendChild(s);}
 })();
 
-// ====== 数据层（Supabase · 静默收集） ======
-const SUPABASE_URL = 'https://huxjrjovoxwoolxmdgub.supabase.co';
-const SUPABASE_KEY = ['sb_pub','lishable_EaNQK_SmhiaHfA','-LvPCe4w_d3rCCZEt'].join('');
+// ====== Supabase ======
+const SB_URL = 'https://huxjrjovoxwoolxmdgub.supabase.co';
+const SB_KEY = ['sb_pub','lishable_EaNQK_SmhiaHfA','-LvPCe4w_d3rCCZEt'].join('');
 
-function getSessionId() {
-  let sid = localStorage.getItem('ch_session_id');
-  if (!sid) {
-    sid = 'ch_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
-    localStorage.setItem('ch_session_id', sid);
-  }
-  return sid;
+function getSid() {
+  let s = localStorage.getItem('ch_sid');
+  if(!s){s='ch_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('ch_sid',s);}
+  return s;
 }
 
-// 本地计数器（纯展示用）
-let _searchCount = parseInt(localStorage.getItem('ch_search_count')||'0');
-let _expandCount = parseInt(localStorage.getItem('ch_expand_count')||'0');
+let _sc=parseInt(localStorage.getItem('ch_sc')||'0'), _ec=parseInt(localStorage.getItem('ch_ec')||'0'), _dc=parseInt(localStorage.getItem('ch_dc')||'0');
+function upStats(){document.getElementById('statSearches').textContent=_sc;document.getElementById('statExpands').textContent=_ec;document.getElementById('statDrills').textContent=_dc;if(_sc+_ec+_dc>0)document.getElementById('statsBar').classList.add('active');}
 
-function updateStatsDisplay() {
-  document.getElementById('statSearches').textContent = _searchCount;
-  document.getElementById('statExpands').textContent = _expandCount;
-  if (_searchCount > 0 || _expandCount > 0) {
-    document.getElementById('statsBar').classList.add('active');
-  }
-}
-
-// 静默发事件到 Supabase（异步，不阻塞，不报错）
-async function logEvent(type, payload) {
+async function log(type, p) {
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/handle_events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        session_id: getSessionId(),
-        event_type: type,
-        topic: payload.topic || null,
-        card_title: payload.card_title || null,
-        card_type: payload.card_type || null,
-        card_index: payload.card_index ?? null,
-        source: payload.source || null,
-        cards_generated: payload.cards_generated || null,
-        card_count: payload.card_count ?? null,
-        has_ability_alert: payload.has_ability_alert ?? null,
-        client_ts: Date.now()
-      })
+    await fetch(`${SB_URL}/rest/v1/handle_events`,{method:'POST',
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({session_id:getSid(),event_type:type,topic:p.topic||null,card_title:p.card_title||null,card_type:p.card_type||null,card_index:p.card_index??null,source:p.source||null,cards_generated:p.cards_generated||null,card_count:p.card_count??null,has_ability_alert:p.has_ability_alert??null,layer:p.layer??null,parent_card_title:p.parent_card_title||null,card_content:p.card_content||null,client_ts:Date.now()})
     });
-  } catch(e) {
-    // 静默失败——不影响用户体验
-  }
+  }catch(e){}
 }
-
-// 页面加载时恢复本地计数
-(function(){
-  updateStatsDisplay();
-})();
+upStats();
 
 // ====== DeepSeek API ======
-async function callDeepSeek(topic) {
-  const apiKey = 'sk-' + atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
+const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
 
-  const prompt = `你是一个"最小必要知识切割"工具。用户想进入一个新领域，你的任务是切出刚好够入门的3块骨架知识。
+async function callAI(topic, context) {
+  const prompt = context
+    ? `领域：${topic}\n上下文：${context}\n\n针对这个具体知识点，切出3块更深入的子骨架。每块2-6字，必须具体、可感知。规则同上。输出JSON:{"blocks":[{"title":"","why":"","type":"知识或能力","detail":""}]}`
+    : `领域：${topic}\n切出3块入门骨架。每块过三关(判断/起步/提问)。用新手能感知到的词。输出JSON:{"topic":"","blocks":[{"title":"","why":"","type":"知识或能力","detail":""}],"ability_alert":""}`;
 
-领域：${topic}
-
-规则（严格遵守）：
-1. 最多3块，不是清单。每块是认知地图的轮廓，不是"要学的东西列表"
-2. 每块必须过三关：判断关（有了它知道这事能不能做）、起步关（知道第一步往哪迈）、提问关（能问出对的问题）
-3. 每块必须回答"为什么没它进不了门"——说不出的就剔除
-4. 每块标注是"知识"（可问AI按需获取）还是"能力"（必须自己攒，AI给不了）
-
-输出严格JSON格式，不要任何其他文字：
-{
-  "topic": "${topic}",
-  "blocks": [
-    {
-      "title": "骨架名称（简短，2-6字，用新手第一次碰到这东西时能直接感知到的词，不要学术分类词）",
-      "why": "为什么没它进不了门（一句话，口语化，像朋友聊天）",
-      "type": "知识 或 能力",
-      "detail": "展开后你还会发现什么（2-3句，让人看了想点进去探索）"
-    }
-  ],
-  "ability_alert": "这个领域AI补不了、必须自己攒的能力是什么（一句话，没有就填null）"
-}`;
-
-  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: '你是一个知识骨架切割助手。只输出JSON，不要任何解释文字。' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 1500
-    })
+  const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
+    body:JSON.stringify({model:'deepseek-chat',messages:[
+      {role:'system',content:'知识骨架切割助手。只输出JSON。用新手能直接感知的词，不要学术分类词。'},
+      {role:'user',content:prompt}
+    ],temperature:0.7,max_tokens:1500})
   });
-  if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-  const data = await resp.json();
-  const content = data.choices[0].message.content;
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('No JSON in response');
-  return JSON.parse(jsonMatch[0]);
+  if(!r.ok) throw new Error(`API ${r.status}`);
+  const d = await r.json();
+  const m = d.choices[0].message.content.match(/\{[\s\S]*\}/);
+  return m ? JSON.parse(m[0]) : {blocks:[]};
 }
 
-// ====== 演示模式 ======
-function getDemoData(topic) {
-  const demos = {
-    '魔方': {
-      topic: '魔方',
-      blocks: [
-        { title: '扭', why: '不会扭，魔方在你手里就是一块塑料。四种基本手法（上勾下回+顺逆）是所有公式的原子', type: '能力', detail: '往上扭、往下扭、顺扭、逆扭。这四种手法组合出你能看到的所有公式。一旦手熟了，你看视频教程就不需要反复暂停——手自己知道怎么走' },
-        { title: '辨色', why: '分不清颜色，你连"拼好了一面"都判断不了。颜色是你在混乱中唯一的路标', type: '能力', detail: '六种颜色、相对位置。知道红对橙、白对黄、蓝对绿之后，你在拼的时候不用翻来翻去确认——余光一扫就知道下一步往哪转' },
-        { title: '分块', why: '不知道角块和边块的区别，你连公式为什么这样转都理解不了。它是魔方结构的底层逻辑', type: '知识', detail: '角块（3面颜色，8个）+边块（2面颜色，12个）+中心块（固定）。分清楚之后你会发现：不是"把红色转到上面"，而是"把红蓝白角块归位"——颗粒度变了' }
-      ],
-      ability_alert: '手感和肌肉记忆——公式可以背，但手指自己记住"这个状态该这么转"只能靠反复拧'
-    },
-    '健身': {
-      topic: '健身',
-      blocks: [
-        { title: '开器械', why: '不会开跑步机，你连健身房的门都进不了。不是毅力问题——是门槛低到你以为所有人都理所应当会', type: '知识', detail: '跑步机的开始/停止/调速、固定器械的插销怎么调。这些都是5分钟能学会的东西，但新手不敢问——"别人都会，我不好意思暴露"' },
-        { title: '做对动作', why: '动作不对=白练+受伤。你不需要知道50个动作，只需要知道你做的那5个动作"对"长什么样', type: '能力', detail: '深蹲时膝盖不内扣、硬拉时背不弓、推胸时肩不耸。这不是知识——你可以看100个视频，但只有照镜子练、拍视频对比，你的身体才知道"什么是对"' },
-        { title: '渐进超负荷', why: '不知道这个，你练三个月还是同一个重量，然后觉得"健身没用"。它是进步的唯一引擎', type: '知识', detail: '每次比上次多做1个/多加重2.5kg。这不是"努力"——是系统。你会发现自己不是练不动，是没给自己一个"比昨天多一点点"的指标' }
-      ],
-      ability_alert: '本体感觉——你的身体能不能感受到"这块肌肉在发力"。教练可以教你动作，但你自己感受不到目标肌群在收缩，动作就是空的'
-    },
-    '价值投资': {
-      topic: '价值投资',
-      blocks: [
-        { title: '安全边际', why: '没有它，你以为自己在投资，其实在赌博。它是"即使我看错了，也不至于死"的底线', type: '知识', detail: '1块钱买2块钱的东西。听起来简单，但做到需要你能估值+能等+能在别人恐慌时不动。这三件事是不同维度的能力，安全边际只是最后的那个表达式' },
-        { title: '能力圈', why: '没有边界，你什么都会看、什么都看不懂。能力圈的意思是：承认你不知道的比你知道的多得多，而且这不可耻', type: '能力', detail: '不是"我能分析什么"——是"我知道我分析不了什么"。巴菲特不投科技股不是因为他蠢，是因为他知道自己看不懂。你越能说"我不懂"，越少亏钱' },
-        { title: '市场先生', why: '不知道市场是个情绪化的疯子，你会被它牵着走——它乐观你追高，它恐慌你割肉', type: '知识', detail: '市场先生的报价每天都有，你可以接受也可以无视。他不是你的老师，他是你的仆人。当他把1块钱的东西标价5毛时，你不是恐慌，是开心——打折了' }
-      ],
-      ability_alert: '情绪控制——看着账户跌30%还能睡得着。这不是知识，是经历过多轮牛熊之后身体才知道的事'
-    }
-  };
-  const key = Object.keys(demos).find(k => topic.includes(k));
-  return key ? demos[key] : null;
-}
+// ====== 演示数据 ======
+const DEMOS = {
+  '魔方':{topic:'魔方',blocks:[
+    {title:'扭',why:'不会扭，魔方就是一块塑料。四种基本手法是所有公式的原子',type:'能力',detail:'往上/往下/顺/逆——四手法组合出所有公式。手熟了，看教程不需要反复暂停'},
+    {title:'辨色',why:'分不清颜色，连"拼好了"都判断不了',type:'能力',detail:'六色相对位置：红对橙、白对黄、蓝对绿。余光一扫就知道下一步往哪转'},
+    {title:'分块',why:'不知道角块边块，公式为什么这样转都理解不了',type:'知识',detail:'角块(3面8个)+边块(2面12个)+中心块(固定)。分清楚后不是"把红色转到上面"而是"把红蓝白角块归位"'}
+  ],ability_alert:'手感——公式可背，但手指自己记住"这个状态该这么转"只能靠反复拧'},
+  '健身':{topic:'健身',blocks:[
+    {title:'开器械',why:'不会开跑步机，你连健身房的门都进不了',type:'知识',detail:'跑步机的启停调速、固定器械插销——5分钟能学会，但新手不敢问'},
+    {title:'做对动作',why:'动作不对=白练+受伤',type:'能力',detail:'深蹲膝盖不内扣、硬拉背不弓。看100个视频不如照镜子练——只有身体知道"什么是对"'},
+    {title:'渐进超负荷',why:'不知道这个，练三个月同重量然后觉得"健身没用"',type:'知识',detail:'每次多做1个/多加重2.5kg。不是努力是系统'}
+  ],ability_alert:'本体感觉——感受不到目标肌群收缩，动作就是空的'}
+};
 
-// ====== 渲染 ======
-function render(data, source) {
-  const result = document.getElementById('result');
-  const metaNote = document.getElementById('metaNote');
+function getDemo(t){const k=Object.keys(DEMOS).find(x=>t.includes(x));return k?DEMOS[k]:null;}
 
-  let html = '';
-  data.blocks.forEach((b, i) => {
-    html += `
-      <div class="handle-card" data-card-title="${b.title}" data-card-type="${b.type}">
+// ====== 生成 passcode ======
+function getPasscode(){return 'CH'+Math.random().toString(36).slice(2,8).toUpperCase();}
+let _passcode = getPasscode();
+
+// ====== 渲染卡片 ======
+function renderCards(container, blocks, topic, layer, parentTitle, source) {
+  blocks.forEach((b,i)=>{
+    const block = document.createElement('div');
+    block.className = 'card-block layer-'+layer;
+    block.innerHTML = `
+      <div class="handle-card" data-card-title="${b.title}" data-card-type="${b.type}" data-layer="${layer}">
         <div class="card-header">
-          <span class="card-number">骨架 ${i+1}/3</span>
-          <span class="card-tag ${b.type === '知识' ? 'tag-knowledge' : 'tag-ability'}">${b.type}</span>
+          <span class="card-tag ${b.type==='知识'?'tag-knowledge':'tag-ability'}">${b.type}</span>
         </div>
         <div class="card-title">${b.title}</div>
         <div class="card-why">${b.why}</div>
         <div class="card-expand">
-          <div class="expand-inner">
-            <strong>🔍 往下挖：</strong><br>${b.detail}
-          </div>
+          <div class="expand-inner"><strong>🔍 往下：</strong><br>${b.detail}</div>
         </div>
-        <div class="expand-hint">点击展开 → 看这块骨架背后藏着什么</div>
-      </div>`;
-  });
+        ${layer < 3
+          ? '<div class="drill-btn" onclick="event.stopPropagation();drillDown(this,'+layer+',\''+b.title.replace(/'/g,"\\'")+'\',\''+topic.replace(/'/g,"\\'")+'\',\''+JSON.stringify(b).replace(/'/g,"\\'")+'\')">🪜 再往下挖一层</div>'
+          : '<div class="lock-screen"><div class="lock-icon">🔒</div><div class="lock-msg">你到了免费层的边界。<br>第四层需要一把钥匙。</div><div class="lock-code">暗语：'+_passcode+'</div><div class="lock-msg" style="margin-top:8px;font-size:0.75rem">把这个暗语发给创建者<br>验证你是真想看第四层的人</div></div>'}
+      </div>
+      <div class="children-wrap"></div>
+    `;
 
-  result.innerHTML = html;
-  result.classList.add('active');
-
-  if (data.ability_alert) {
-    metaNote.innerHTML = `<strong>⚠️ AI补不了的：</strong>${data.ability_alert}`;
-    metaNote.classList.add('active');
-  } else {
-    metaNote.classList.remove('active');
-  }
-
-  document.getElementById('bottomActions').style.display = 'flex';
-
-  // 绑定点展事件 + 数据日志
-  document.querySelectorAll('.handle-card').forEach((card, i) => {
-    // 入场动画
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(20px)';
-    setTimeout(() => {
-      card.style.transition = 'all 0.5s ease';
-      card.style.opacity = '1';
-      card.style.transform = 'translateY(0)';
-    }, i * 120);
-
-    // 点击事件
-    card.addEventListener('click', function() {
+    // 展开/折叠
+    const card = block.querySelector('.handle-card');
+    card.addEventListener('click', function(e){
+      if(e.target.closest('.drill-btn') || e.target.closest('.lock-screen')) return;
       const wasExpanded = this.classList.contains('expanded');
       this.classList.toggle('expanded');
-      const nowExpanded = this.classList.contains('expanded');
-
-      const cardTitle = this.dataset.cardTitle;
-      const cardType = this.dataset.cardType;
-
-      if (nowExpanded) { _expandCount++; localStorage.setItem('ch_expand_count', _expandCount); }
-      logEvent(nowExpanded ? 'card_expand' : 'card_collapse', {
-        topic: data.topic,
-        card_title: cardTitle,
-        card_type: cardType,
-        card_index: i,
-        source: source
+      if(!wasExpanded){ _ec++; localStorage.setItem('ch_ec',_ec); }
+      log(!wasExpanded?'card_expand':'card_collapse',{
+        topic, card_title:b.title, card_type:b.type, card_index:i, source, layer,
+        parent_card_title: parentTitle||null,
+        card_content: {title:b.title, why:b.why, detail:b.detail, type:b.type}
       });
-      updateStatsDisplay();
+      upStats();
     });
-  });
 
-  // 搜索日志
-  _searchCount++; localStorage.setItem('ch_search_count', _searchCount);
-  logEvent('search', {
-    topic: data.topic,
-    source: source,
-    cards_generated: data.blocks.map(b => b.title),
-    card_count: data.blocks.length,
-    has_ability_alert: !!data.ability_alert
-  });
+    // 第3层显示锁
+    if(layer >= 3) {
+      const ls = card.querySelector('.lock-screen');
+      if(ls) ls.classList.add('active');
+      // log lock view
+      log('lock_view',{topic,card_title:b.title,layer,parent_card_title:parentTitle||null,source});
+    }
 
-  updateStatsDisplay();
+    container.appendChild(block);
+  });
 }
+
+// ====== 往下挖 ======
+window.drillDown = async function(btn, layer, cardTitle, topic, cardJson) {
+  const block = btn.closest('.card-block');
+  const childrenWrap = block.querySelector('.children-wrap');
+  
+  // 已加载过
+  if(childrenWrap.classList.contains('active')) return;
+
+  btn.classList.add('loading');
+  btn.textContent = '正在挖...';
+
+  try {
+    let parsed;
+    try { parsed = JSON.parse(cardJson); } catch(e) { parsed = {title:cardTitle}; }
+    const context = `用户想深入了解"${cardTitle}"——你之前的解释是：${parsed.why||''} ${parsed.detail||''}`;
+    const data = await callAI(topic, context);
+    const nextLayer = layer + 1;
+
+    if(data.blocks && data.blocks.length > 0) {
+      renderCards(childrenWrap, data.blocks.slice(0,3), topic, nextLayer, cardTitle, 'api');
+      childrenWrap.classList.add('active');
+      _dc++; localStorage.setItem('ch_dc',_dc);
+
+      // 记录生成事件（含完整内容）
+      log('card_drilldown',{
+        topic, layer:nextLayer, parent_card_title:cardTitle, source:'api',
+        cards_generated: data.blocks.map(b=>b.title),
+        card_count: data.blocks.length,
+        card_content: data.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))
+      });
+      upStats();
+    }
+  } catch(e) {
+    console.error('drillDown error', e);
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = '🪜 再往下挖一层';
+  }
+};
 
 // ====== 主流程 ======
 async function generate() {
-  const input = document.getElementById('topicInput');
-  const topic = input.value.trim();
-  if (!topic) return;
+  const topic = document.getElementById('topicInput').value.trim();
+  if(!topic) return;
 
-  const btn = document.getElementById('btnGo');
-  const loading = document.getElementById('loading');
-  const result = document.getElementById('result');
-  const metaNote = document.getElementById('metaNote');
+  const btn = document.getElementById('btnGo'), loading = document.getElementById('loading'),
+        result = document.getElementById('result'), mn = document.getElementById('metaNote');
+  result.classList.remove('active'); result.innerHTML=''; mn.classList.remove('active');
+  document.getElementById('bottomActions').style.display='none';
+  btn.classList.add('loading'); btn.textContent='切骨中...'; loading.classList.add('active');
 
-  // 重置状态
-  result.classList.remove('active');
-  result.innerHTML = '';
-  metaNote.classList.remove('active');
-  document.getElementById('bottomActions').style.display = 'none';
-
-  btn.classList.add('loading');
-  btn.textContent = '切骨中...';
-  loading.classList.add('active');
+  _passcode = getPasscode(); // 新会话新暗语
 
   try {
-    let data = getDemoData(topic);
-    let source = 'demo';
-    if (!data) {
-      data = await callDeepSeek(topic);
-      source = 'api';
+    let data = getDemo(topic), source = 'demo';
+    if(!data){ data = await callAI(topic); source = 'api'; }
+    if(!data.blocks||data.blocks.length===0) throw new Error('empty');
+
+    renderCards(result, data.blocks.slice(0,3), topic, 1, null, source);
+    result.classList.add('active');
+
+    if(data.ability_alert) {
+      mn.innerHTML=`<strong>⚠️ AI补不了的：</strong>${data.ability_alert}`; mn.classList.add('active');
     }
-    render(data, source);
-  } catch (err) {
-    console.error(err);
-    const data = getDemoData(topic);
-    if (data) {
-      render(data, 'demo_fallback');
-    } else {
-      const fallback = {
-        topic,
-        blocks: [
-          { title: '基础操作', why: '不会动手，你连第一步都迈不出去。先搞清楚"最基础的那个动作"是什么', type: '知识', detail: '别急着找教程。先摸清楚最基本的互动方式——如果是工具，打开它；如果是技能，做一个最简单的动作；如果是知识，找一个最核心的概念' },
-          { title: '核心概念', why: '不知道这个东西"长什么样"，你跟AI都没法对话——连该问什么都想不出来', type: '知识', detail: '用一句话说清楚这个领域在解决什么问题。说不清楚就是没摸到门。试着问AI："用最土的话告诉我，XX到底是干嘛的"——这一句就是你的第一块骨架' },
-          { title: '反馈信号', why: '没有判断标准，你做了也白做——不知道自己是对是错，练再多也是原地踏步', type: '能力', detail: '找到一个你能感知到的"做对了"的信号——声音、颜色变化、数字变动、别人的反应。这个信号比任何教程都重要——它是你自己的导航系统' }
-        ],
-        ability_alert: '判断力——知道"我做到什么程度算够了"。AI可以告诉你标准，但只有你自己知道自己的手感和节奏'
-      };
-      render(fallback, 'fallback');
-    }
+
+    _sc++; localStorage.setItem('ch_sc',_sc);
+    log('search',{topic,source,cards_generated:data.blocks.map(b=>b.title),card_count:data.blocks.length,has_ability_alert:!!data.ability_alert,layer:1,
+      card_content: data.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
+    upStats();
+    document.getElementById('bottomActions').style.display='flex';
+  } catch(e) {
+    const fb = getDemo(topic) || {topic,blocks:[
+      {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
+      {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
+      {title:'反馈信号',why:'没有判断标准，做对了你都不知道',type:'能力',detail:'找个你能感知的"做对了"的信号——声音、颜色变化、数字变动。这才是你的导航系统'}
+    ],ability_alert:'判断力——知道自己做到什么程度算够了'};
+    renderCards(result, fb.blocks, topic, 1, null, 'fallback');
+    result.classList.add('active'); mn.innerHTML=`<strong>⚠️ AI补不了的：</strong>${fb.ability_alert}`; mn.classList.add('active');
   } finally {
-    btn.classList.remove('loading');
-    btn.textContent = '🔍 摸门';
-    loading.classList.remove('active');
+    btn.classList.remove('loading'); btn.textContent='🔍 摸门'; loading.classList.remove('active');
   }
 }
 
 function retry() {
-  document.getElementById('topicInput').value = '';
-  document.getElementById('topicInput').focus();
-  document.getElementById('result').classList.remove('active');
+  document.getElementById('topicInput').value=''; document.getElementById('topicInput').focus();
+  document.getElementById('result').classList.remove('active'); document.getElementById('result').innerHTML='';
   document.getElementById('metaNote').classList.remove('active');
-  document.getElementById('bottomActions').style.display = 'none';
+  document.getElementById('bottomActions').style.display='none';
   document.getElementById('statsBar').classList.remove('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  _sc=0;_ec=0;_dc=0; localStorage.setItem('ch_sc','0');localStorage.setItem('ch_ec','0');localStorage.setItem('ch_dc','0');
+  upStats(); window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// 回车触发
-document.getElementById('topicInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') generate();
-});
-
-console.log('🧩 认知抓手 v2.0 已就绪 · 所有交互数据已开始记录');
+document.getElementById('topicInput').addEventListener('keydown',e=>{if(e.key==='Enter')generate();});
+console.log('🧩 认知抓手 v3 · 三层分型 + 四层暗语锁');
 </script>
 </body>
 </html>
