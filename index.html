@@ -127,8 +127,8 @@
 <div class="stars" id="stars"></div>
 
 <div class="main">
-  <div class="title">认知抓手 v3</div>
-  <div class="subtitle">三层分型 · 点一下裂三块 · 第四层暗语锁</div>
+  <div class="title">认知抓手</div>
+  <div class="subtitle">扔一个领域进来，秒出三块入门骨架<br>点开还能往下挖</div>
 
   <div class="input-wrap">
     <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他…" autofocus>
@@ -210,7 +210,7 @@ async function log(type, p) {
   try {
     await fetch(`${SB_URL}/rest/v1/handle_events`,{method:'POST',
       headers:{'apikey':SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({session_id:getSid(),event_type:type,topic:p.topic||null,card_title:p.card_title||null,card_type:p.card_type||null,card_index:p.card_index??null,source:p.source||null,cards_generated:p.cards_generated||null,card_count:p.card_count??null,has_ability_alert:p.has_ability_alert??null,layer:p.layer??null,parent_card_title:p.parent_card_title||null,card_content:p.card_content||null,passcode:p.passcode||null,client_ts:Date.now()})
+      body:JSON.stringify({session_id:getSid(),event_type:type,topic:p.topic||null,card_title:p.card_title||null,card_type:p.card_type||null,card_index:p.card_index??null,source:p.source||null,cards_generated:p.cards_generated||null,card_count:p.card_count??null,has_ability_alert:p.has_ability_alert??null,layer:p.layer??null,parent_card_title:p.parent_card_title||null,card_content:p.card_content||null,passcode:p.passcode||null,error_msg:p.error_msg||null,client_ts:Date.now()})
     });
   }catch(e){}
 }
