@@ -311,6 +311,7 @@ async function callAI(topic, context) {
   }
 
   const prompt = getPrompt();
+  const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
       {role:'system',content:SYSTEM},
