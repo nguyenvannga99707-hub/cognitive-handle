@@ -58,13 +58,13 @@
     cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;
   }
   .handle-card:hover { border-color: #4a4a6e; transform: translateY(-1px); }
-  .handle-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 16px 0 0 16px; }
+  .handle-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+  .layer-1 .handle-card::before { background: linear-gradient(90deg, #f59e0b, #f97316); }
+  .layer-2 .handle-card::before { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
+  .layer-3 .handle-card::before { background: linear-gradient(90deg, #06b6d4, #3b82f6); }
   .layer-1 .handle-card { background: #141428; }
-  .layer-1 .handle-card::before { background: linear-gradient(180deg, #f59e0b, #f97316); }
-  .layer-2 .handle-card { background: #15142a; }
-  .layer-2 .handle-card::before { background: linear-gradient(180deg, #8b5cf6, #6366f1); }
-  .layer-3 .handle-card { background: #141a2a; }
-  .layer-3 .handle-card::before { background: linear-gradient(180deg, #06b6d4, #3b82f6); }
+  .layer-2 .handle-card { background: #141428; }
+  .layer-3 .handle-card { background: #141428; }
   .layer-2 { padding-left: 20px; }
   .layer-3 { padding-left: 40px; }
 
@@ -144,7 +144,7 @@
 
 <div class="main">
   <div class="title">认知抓手</div>
-  <div class="subtitle">扔一个领域进来，秒出三块入门骨架<br>点开还能往下挖</div>
+  <div class="subtitle">扔一个领域进来，先告诉你三个坑<br>踩进去？给你支架。站稳了？带你走两步</div>
 
   <div class="input-wrap">
     <input type="text" id="topicInput" placeholder="比如：魔方、健身、学吉他…" autofocus>
@@ -152,7 +152,7 @@
   </div>
 
   <div class="loading-indicator" id="loading">
-    <span>正在切骨架</span><div class="loading-dots"><span></span><span></span><span></span></div>
+    <span>在找坑</span><div class="loading-dots"><span></span><span></span><span></span></div>
   </div>
 
   <div class="result-wrap" id="result"></div>
@@ -236,23 +236,80 @@ upStats();
 const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
 
 async function callAI(topic, context) {
-  const SYSTEM = `你是认知连接器。你的任务不是教知识，而是在用户已有的认知和陌生领域之间搭桥。
+  // layer: 1=坑(金句+预期违背) 2=支架(站稳别掉) 3=实操(往上走+高潮寸止)
+  const layer = (context && context.layer) || 1;
 
-核心定位：
-你不是一本学习手册。你是一个转换插头——把陌生领域的电压转换成用户插座能插进去的电压。用户不需要"这个领域有什么"，他需要"这个领域跟我已经会的东西有什么关系"。
+  const SYSTEM = `你是认知抓手——一个预期违背引擎。你不是在教用户知识，你是在引他走一条「踩坑→站稳→走两步→高潮寸止」的路。
 
-铁律（违反任何一条=失败）：
-1. 你搭的每一座桥必须借一个用户大概率已经熟悉的日常场景里的概念，用它平行解释陌生领域的一个关键动作。不许从领域内部切骨架——必须从用户的生活里借材料。
-2. 禁止输出任何"用户3秒内自己也能想到的通用建议"。如果一块骨架让用户看完反应"这不废话吗"，这块就是零分。
-3. 每块的标题必须是动词短语或感知短语（如"接住她的吐槽""不管她说什么先嗯一声"），不能是抽象名词或分类标签（如"沟通能力""情绪管理"）。
-4. 每块必须包含一个用户能立刻动手的具体做法，具体到能看见画面。不是"你要勇敢"——而是"手抖的时候把手机放桌上打字，手抖不抖她看不见"。
-5. 三块之间必须有逻辑递进：第一块是门槛最低的第一动作，第三块指向最终的"成了"状态。它们是台阶，不是并列选项。
-6. 你面对的是一个站在健身房门口连跑步机开关都找不到的人。用他看到的世界里的词。不要任何学术词汇。不要"基础操作手法"——要说"扭"。
-7. 你的最高荣誉不是"覆盖完整"，是"用户看完第一块忍不住点第二块"。`;
+核心哲学：
+- 用户以为你会回答他的问题。你偏不——你重新定义他的问题。
+- 用户以为你要教他基础知识。你偏不——你先告诉他哪里会死。
+- 每一层都在制造「我以为是这样……结果不是！」的瞬间。
+- 只有20%的知识能抓住人。你把那20%变成钩子，剩下80%藏在他动手时自然浮现。
 
-  const prompt = context
-    ? `领域：${topic}\n\n用户正在深入理解"${context.cardTitle}"（之前产出：${context.why}）。往下再搭一层连接桥——更细碎、更具体、更让用户觉得"原来这么简单"。每块仍然从日常场景里借材料。\n\n输出严格JSON：\n{"blocks":[{"title":"","why":"","detail":""}]}`
-    : `领域：${topic}\n\n搭3座连接桥。从日常场景借材料，帮用户从他已经会的东西进入这个陌生领域。\n\n输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","detail":""}]}`;const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
+第一层（坑）：用户第一次搜索时，给他3个一踩就死的坑。
+  标题：2-5字金句，尖锐、反直觉（不是"敢搭话"而是"别追"）。
+  为什么：预期违背。句式「你以为X是最难的？错了——真正要你命的是Y。」先说出用户心里默认的答案，再用一句真实到荒诞的现实打碎它。
+  怎么做：让用户从坑里站起来的第一个动作。具体到能看见画面。
+
+第二层（支架）：用户踩了坑，点进来。给他3个支架让他站稳别掉下去。
+  标题：支撑点的名字，动词短语。
+  为什么：为什么这个支架有效——和第一个坑怎么对应的。
+  怎么做：具体做法，让他有东西抓。
+
+第三层（实操）：用户站稳了，需要往上走。给他3个实操步骤。
+  标题：具体动作。
+  为什么：为什么这样做。
+  怎么做：操作细节。第三块必须是一个高潮——用户看完觉得"我知道了！"——然后戛然而止。这就是寸止。`;
+
+  const firstLayerPrompt = `领域：${topic}
+
+第一层——扔3个坑。
+
+每个坑的格式：
+{
+  "title": "2-5字金句标题（反直觉、尖锐）",
+  "why": "预期违背——先说出用户以为的答案，再用一句真实到荒诞的现实打碎它",
+  "detail": "让用户从坑里站起来的第一个动作，具体能看见画面"
+}
+
+三块坑必须递进：第一块门槛最低的坑，第三块最要命的坑。
+
+输出JSON：{"topic":"${topic}","blocks":[{"title":"","why":"","detail":""}]}`;
+
+  const secondLayerPrompt = `领域：${topic}
+用户踩了坑「${context.cardTitle}」（${context.why}）。
+
+第二层——给他3个支架，让他站稳别掉下去。
+
+每个支架的格式：
+{
+  "title": "支撑点（动词短语）",
+  "why": "为什么这个支架能让他别掉下去",
+  "detail": "具体做法"
+}
+
+输出JSON：{"blocks":[{"title":"","why":"","detail":""}]}`;
+
+  const thirdLayerPrompt = `领域：${topic}
+用户已经站稳了（基于「${context.cardTitle}」），需要往上走两步。
+
+第三层——给他3个实操步骤，让他真正能动手。
+第三块必须是高潮——用户看完觉得「我知道了！」——然后戛然而止。
+
+每个步骤的格式：
+{
+  "title": "具体动作",
+  "why": "为什么这样做",
+  "detail": "操作细节"
+}
+
+输出JSON：{"blocks":[{"title":"","why":"","detail":""}]}`;
+
+  const prompt = !context ? firstLayerPrompt
+    : layer === 1 ? firstLayerPrompt
+    : layer === 2 ? secondLayerPrompt
+    : thirdLayerPrompt;
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
       {role:'system',content:SYSTEM},
@@ -370,7 +427,7 @@ async function drillDown(btn) {
   try {
     let parsed;
     try { parsed = JSON.parse(cardJson); } catch(e) { parsed = {title:cardTitle}; }
-    const data = await callAI(topic, {cardTitle:parsed.title||cardTitle, why:parsed.why||''});
+    const data = await callAI(topic, {cardTitle:parsed.title||cardTitle, why:parsed.why||'', layer: layer + 1});
     const nextLayer = layer + 1;
 
     if(data.blocks && data.blocks.length > 0) {
