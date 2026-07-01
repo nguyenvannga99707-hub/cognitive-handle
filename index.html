@@ -220,20 +220,26 @@ upStats();
 const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
 
 async function callAI(topic, context) {
-  const baseRules = `你是一个"最小必要知识切割"工具。切出刚好够入门的骨架知识。
+  const SYSTEM = `你是认知连接器。你的任务不是教知识，而是在用户已有的认知和陌生领域之间搭桥。
 
-规则（严格遵守）：
-1. 最多3块，不是清单。每块2-6字，用新手第一眼就能感知到的词，不要学术分类词
-2. 每块必须过三关：判断关（知道这事能不能做）、起步关（知道第一步往哪迈）、提问关（能问出对的问题）
-3. 每块必须说清"为什么没它进不了门"——说不出的就剔除
-4. 每块标注是"知识"（可问AI按需获取）还是"能力"（必须自己攒）`;
+核心定位：
+你不是一本学习手册。你是一个转换插头——把陌生领域的电压转换成用户插座能插进去的电压。用户不需要"这个领域有什么"，他需要"这个领域跟我已经会的东西有什么关系"。
+
+铁律（违反任何一条=失败）：
+1. 你搭的每一座桥必须借一个用户大概率已经熟悉的日常场景里的概念，用它平行解释陌生领域的一个关键动作。不许从领域内部切骨架——必须从用户的生活里借材料。
+2. 禁止输出任何"用户3秒内自己也能想到的通用建议"。如果一块骨架让用户看完反应"这不废话吗"，这块就是零分。
+3. 每块的标题必须是动词短语或感知短语（如"接住她的吐槽""不管她说什么先嗯一声"），不能是抽象名词或分类标签（如"沟通能力""情绪管理"）。
+4. 每块必须包含一个用户能立刻动手的具体做法，具体到能看见画面。不是"你要勇敢"——而是"手抖的时候把手机放桌上打字，手抖不抖她看不见"。
+5. 三块之间必须有逻辑递进：第一块是门槛最低的第一动作，第三块指向最终的"成了"状态。它们是台阶，不是并列选项。
+6. 你面对的是一个站在健身房门口连跑步机开关都找不到的人。用他看到的世界里的词。不要任何学术词汇。不要"基础操作手法"——要说"扭"。
+7. 你的最高荣誉不是"覆盖完整"，是"用户看完第一块忍不住点第二块"。`;
 
   const prompt = context
-    ? `${baseRules}\n\n领域：${topic}\n\n用户正在深入理解"${context.cardTitle}"——你之前说：${context.why}\n\n往下挖一层，切出3块更深入的子骨架。必须跟"${context.cardTitle}"直接相关。每块让用户感觉"原来如此"。\n\n输出严格JSON，不要任何其他文字：\n{"blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}]}`
-    : `${baseRules}\n\n领域：${topic}\n\n切出3块入门骨架。输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","type":"知识 或 能力","detail":""}],"ability_alert":"（这个领域AI补不了的能力是什么，没有就填null）"}`;const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
+    ? `领域：${topic}\n\n用户正在深入理解"${context.cardTitle}"（之前产出：${context.why}）。往下再搭一层连接桥——更细碎、更具体、更让用户觉得"原来这么简单"。每块仍然从日常场景里借材料。\n\n输出严格JSON：\n{"blocks":[{"title":"","why":"","detail":""}]}`
+    : `领域：${topic}\n\n搭3座连接桥。从日常场景借材料，帮用户从他已经会的东西进入这个陌生领域。\n\n输出严格JSON：\n{"topic":"${topic}","blocks":[{"title":"","why":"","detail":""}]}`;const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
-      {role:'system',content:'知识骨架切割助手。只输出JSON。用新手能直接感知的词。'},
+      {role:'system',content:SYSTEM},
       {role:'user',content:prompt}
     ],temperature:0.7,max_tokens:1500})
   });
@@ -277,7 +283,7 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
     block.innerHTML = `
       <div class="handle-card" data-card-title="${b.title}" data-card-type="${b.type}" data-layer="${layer}">
         <div class="card-header">
-          <span class="card-tag ${b.type==='知识'?'tag-knowledge':'tag-ability'}">${b.type}</span>
+          ${b.type ? `<span class="card-tag ${b.type==='知识'?'tag-knowledge':'tag-ability'}">${b.type}</span>` : ''}
         </div>
         <div class="card-title">${b.title}</div>
         <div class="card-why">${b.why}</div>
@@ -394,7 +400,7 @@ async function generate() {
     result.classList.add('active');
 
     if(data.ability_alert) {
-      mn.innerHTML=`<strong>⚠️ AI补不了的：</strong>${data.ability_alert}`; mn.classList.add('active');
+      // ability_alert removed from prompt - silently skip
     }
 
     _sc++; localStorage.setItem('ch_sc',_sc);
@@ -412,7 +418,7 @@ async function generate() {
       ],ability_alert:'判断力——知道自己做到什么程度算够了'};
       renderCards(result, fb.blocks, topic, 1, null, 'fallback');
       result.classList.add('active');
-      if(fb.ability_alert){mn.innerHTML='<strong>⚠️ AI补不了的：</strong>'+fb.ability_alert;mn.classList.add('active')}
+      if(fb.ability_alert){/* silently skip */}
       _sc++; localStorage.setItem('ch_sc',_sc);
       log('search',{topic,source:'fallback',cards_generated:fb.blocks.map(b=>b.title),card_count:fb.blocks.length,has_ability_alert:!!fb.ability_alert,layer:1,passcode:_passcode,
         card_content: fb.blocks.map(b=>({title:b.title,why:b.why,detail:b.detail,type:b.type}))});
