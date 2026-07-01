@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- v4.3 -->
+<!DOCTYPE html><!-- v4.5 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -295,28 +295,32 @@ async function callAI(topic, context) {
   // layer: 1=坑(金句+预期违背) 2=支架(站稳别掉) 3=实操(往上走+高潮寸止)
   const layer = (context && context.layer) || 1;
 
-  const SYSTEM = `你是认知抓手——一个预期违背引擎。你不是在教用户知识，你是在引他走一条「踩坑→站稳→走两步→高潮寸止」的路。
+  const PHILOSOPHY = `你是认知抓手——一个预期违背引擎。你不是在教用户知识，你是在引他走一条「踩坑→站稳→走两步→高潮寸止」的路。
 
 核心哲学：
 - 用户以为你会回答他的问题。你偏不——你重新定义他的问题。
 - 用户以为你要教他基础知识。你偏不——你先告诉他哪里会死。
 - 每一层都在制造「我以为是这样……结果不是！」的瞬间。
-- 只有20%的知识能抓住人。你把那20%变成钩子，剩下80%藏在他动手时自然浮现。
+- 只有20%的知识能抓住人。你把那20%变成钩子，剩下80%藏在他动手时自然浮现。`;
 
-第一层（坑）：用户第一次搜索时，给他3个一踩就死的坑。
-  标题：2-5字金句，尖锐、反直觉（不是"敢搭话"而是"别追"）。
+  const LAYER_PROMPTS = {
+    1: `第一层（坑）：用户第一次搜索时，给他3个一踩就死的坑。
+  标题：2-5字金句，尖锐、反直觉。
   为什么：预期违背。句式「你以为X是最难的？错了——真正要你命的是Y。」先说出用户心里默认的答案，再用一句真实到荒诞的现实打碎它。
-  怎么做：让用户从坑里站起来的第一个动作。具体到能看见画面。
+  怎么做：让用户从坑里站起来的第一个动作。具体到能看见画面。`,
 
-第二层（支架）：用户踩了坑，点进来。给他3个支架让他站稳别掉下去。
+    2: `第二层（支架）：用户踩了坑，点进来。给他3个支架让他站稳别掉下去。
   标题：支撑点的名字，动词短语。
   为什么：为什么这个支架有效——和第一个坑怎么对应的。
-  怎么做：具体做法，让他有东西抓。
+  怎么做：具体做法，让他有东西抓。`,
 
-第三层（实操）：用户站稳了，需要往上走。给他3个实操步骤。
+    3: `第三层（实操）：用户站稳了，需要往上走。给他3个实操步骤。
   标题：具体动作。
   为什么：为什么这样做。
-  怎么做：操作细节。第三块必须是一个高潮——用户看完觉得"我知道了！"——然后戛然而止。这就是寸止。`;
+  怎么做：操作细节。第三块必须是一个高潮——用户看完觉得「我知道了！」——然后戛然而止。这就是寸止。`
+  };
+
+  const SYSTEM = PHILOSOPHY + '\n\n' + (LAYER_PROMPTS[layer] || LAYER_PROMPTS[1]);
 
   function getPrompt() {
     if (!context || layer === 1) {
@@ -371,7 +375,7 @@ async function callAI(topic, context) {
   const prompt = getPrompt();
   const r = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
-    body:JSON.stringify({model:'deepseek-chat',messages:[
+    body:JSON.stringify({model:'deepseek-v4-flash',messages:[
       {role:'system',content:SYSTEM},
       {role:'user',content:prompt}
     ],temperature:0.7,max_tokens:1500})
@@ -381,10 +385,29 @@ async function callAI(topic, context) {
   }
   const d = await r.json();
   const raw = d.choices[0].message.content;
-  console.log('📦 raw response:', raw.slice(0, 200));
   const m = raw.match(/\{[\s\S]*\}/);
   if(!m) throw new Error('No JSON in response: '+raw.slice(0,100));
-  return JSON.parse(m[0]);
+  try {
+    return JSON.parse(m[0]);
+  } catch(e) {
+    // Retry once: 更低温度 + 只输出JSON的指令
+    const retryPrompt = getPrompt() + '\n\n重要：只返回JSON，不要任何其他文字。JSON必须合法，不能有尾随逗号。';
+    const r2 = await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
+      body:JSON.stringify({
+        model:'deepseek-v4-flash',
+        messages:[
+          {role:'system',content:SYSTEM},
+          {role:'user',content:retryPrompt + '\n\n只返回JSON。不要前缀、不要解释、不要markdown代码块。'}
+        ],temperature:0.4,max_tokens:1500})
+    });
+    if(!r2.ok) throw new Error('Retry API error: '+r2.status);
+    const d2 = await r2.json();
+    const raw2 = d2.choices[0].message.content;
+    const m2 = raw2.match(/\{[\s\S]*\}/);
+    if(!m2) throw new Error('No JSON after retry');
+    return JSON.parse(m2[0]);
+  }
 }
 
 // ====== 错误提示 ======
