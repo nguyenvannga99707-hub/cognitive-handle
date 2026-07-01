@@ -266,7 +266,7 @@ const DEMOS = {
     {title:'渐进超负荷',why:'不知道这个，练三个月同重量然后觉得"健身没用"',type:'知识',detail:'每次多做1个/多加重2.5kg。不是努力是系统'}
   ],ability_alert:'本体感觉——感受不到目标肌群收缩，动作就是空的'}
 };
-function getDemo(t){const k=Object.keys(DEMOS).find(x=>t.includes(x));return k?DEMOS[k]:null;}
+function getDemo(t){try{const k=Object.keys(DEMOS).find(x=>t.includes(x));return k?DEMOS[k]:null}catch(e){return null}}
 
 // ====== DeepSeek API ======
 const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
