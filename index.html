@@ -65,19 +65,46 @@
   .layer-1 .handle-card { background: #141428; }
   .layer-2 .handle-card { background: #141428; }
   .layer-3 .handle-card { background: #141428; }
-  .layer-2 { padding-left: 20px; }
-  .layer-3 { padding-left: 36px; }
-  .layer-4 { padding-left: 46px; }
-  .layer-5 { padding-left: 52px; }
-  .layer-6 { padding-left: 56px; }
-  .layer-7 { padding-left: 58px; }
+  .layer-2 { padding-left: 16px; }
+  .layer-3 { padding-left: 20px; }
+  .layer-4,
+  .layer-5,
+  .layer-6,
+  .layer-7 { padding-left: 20px; } /* L4起不再递增，视觉上「到深水区了」即可 */
   .layer-4 .handle-card, .layer-5 .handle-card, .layer-6 .handle-card, .layer-7 .handle-card {
     background: rgba(20,20,40,0.7); border-color: rgba(42,42,62,0.5);
+    padding: 14px 16px; /* 深层卡片更紧凑 */
   }
-  .layer-4 .handle-card::before { background: linear-gradient(90deg, #6366f1, #8b5cf6); height: 2px; }
-  .layer-5 .handle-card::before { background: linear-gradient(90deg, #a78bfa, #c4b5fd); height: 1px; }
-  .layer-6 .handle-card::before { background: rgba(139,92,246,0.3); height: 1px; }
-  .layer-7 .handle-card::before { background: rgba(139,92,246,0.15); height: 1px; }
+  .layer-4 .handle-card .card-title,
+  .layer-5 .handle-card .card-title,
+  .layer-6 .handle-card .card-title,
+  .layer-7 .handle-card .card-title { font-size: 0.92rem; } /* 深层标题缩小 */
+  .layer-4 .handle-card .card-why,
+  .layer-5 .handle-card .card-why,
+  .layer-6 .handle-card .card-why,
+  .layer-7 .handle-card .card-why { font-size: 0.74rem; } /* 深层why缩小 */
+  .layer-4 .handle-card .expand-inner,
+  .layer-5 .handle-card .expand-inner,
+  .layer-6 .handle-card .expand-inner,
+  .layer-7 .handle-card .expand-inner {
+    padding: 8px 10px;
+    font-size: 0.74rem;
+  }
+  .children-wrap { flex-direction: column; gap: 6px; margin-top: 0;
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.5s ease, opacity 0.35s ease, margin-top 0.5s ease; }
+  .children-wrap.active { max-height: 5000px; opacity: 1; margin-top: 6px; }
+  .children-wrap .card-block {
+    animation: cardSlideIn 0.4s ease both;
+  }
+  .children-wrap .card-block:nth-child(1) { animation-delay: 0.05s; }
+  .children-wrap .card-block:nth-child(2) { animation-delay: 0.15s; }
+  .children-wrap .card-block:nth-child(3) { animation-delay: 0.25s; }
+
+  @keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   /* 层级徽章 */
   .layer-badge { display: inline-block; font-size: 0.6rem; padding: 1px 6px; border-radius: 3px;
@@ -104,7 +131,7 @@
   .drill-btn:hover { background: rgba(139,92,246,0.18); border-color: #8b5cf6; }
   .drill-btn.loading { opacity: 0.5; pointer-events: none; }
 
-  /* 第四层锁 */
+  /* 锁屏 */
   .lock-screen {
     display: none; margin-top: 10px; padding: 16px;
     background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px;
@@ -116,23 +143,6 @@
   .lock-code { display: inline-block; margin-top: 8px; padding: 6px 14px;
     background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px;
     color: #fbbf24; font-family: monospace; font-size: 1rem; letter-spacing: 0.1em; }
-
-  /* 子卡片容器 + 入场动画 */
-  .children-wrap { flex-direction: column; gap: 8px; margin-top: 0; 
-    max-height: 0; overflow: hidden; opacity: 0; 
-    transition: max-height 0.5s ease, opacity 0.35s ease, margin-top 0.5s ease; }
-  .children-wrap.active { max-height: 3000px; opacity: 1; margin-top: 8px; }
-  .children-wrap .card-block {
-    animation: cardSlideIn 0.4s ease both;
-  }
-  .children-wrap .card-block:nth-child(1) { animation-delay: 0.05s; }
-  .children-wrap .card-block:nth-child(2) { animation-delay: 0.15s; }
-  .children-wrap .card-block:nth-child(3) { animation-delay: 0.25s; }
-
-  @keyframes cardSlideIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
 
   .meta-note { margin-top: 28px; padding: 14px 18px;
     background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); border-radius: 12px;
