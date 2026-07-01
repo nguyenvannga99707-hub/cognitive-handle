@@ -488,8 +488,12 @@ async function drillDown(btn) {
       drillDown(btn);
     }, {once: true});
   } finally {
-    btn.classList.remove('loading');
-    btn.textContent = '🪜 再往下挖一层';
+    if(!btn.classList.contains('error')) {
+      btn.classList.remove('loading');
+      btn.textContent = '🪜 再往下挖一层';
+    } else {
+      btn.classList.remove('loading');
+    }
   }
 }
 
