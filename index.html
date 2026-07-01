@@ -215,8 +215,15 @@ let _restored = false;
           document.getElementById('topicInput').value = data[0].topic;
           // 自动触发生成
           setTimeout(() => generate(), 600);
+        } else {
+          console.warn('续命恢复: 未找到话题记录');
+          document.getElementById('topicInput').placeholder = '请输入你之前探索的话题...';
+          document.getElementById('topicInput').focus();
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error('续命恢复失败:', e);
+        document.querySelector('.subtitle').innerHTML = `🔓 续命模式 · 第1-${unlock}层已解锁<br><span style="color:#f87171">未找到之前的探索记录，请手动输入话题</span>`;
+      }
     })();
   }
 })();
@@ -365,9 +372,9 @@ function renderCards(container, blocks, topic, layer, parentTitle, source) {
         <div class="card-expand">
           <div class="expand-inner"><strong>🔍 往下：</strong><br>${b.detail}</div>
         </div>
-        ${layer < _maxFreeLayers
+        ${(_restored ? layer <= _maxFreeLayers : layer < _maxFreeLayers)
           ? `<div class="drill-btn" data-topic="${topic}" data-layer="${layer}" data-card-title="${b.title}" data-card-json="${cardJsonEncoded}">🪜 再往下挖一层</div>`
-          : layer >= _maxFreeLayers && layer < (_maxFreeLayers+1)
+          : !_restored && layer === _maxFreeLayers
             ? '<div class="lock-screen"><div class="lock-icon">🔒</div><div class="lock-msg">你到了免费层的边界。<br>第四层需要一把钥匙。</div><div class="lock-code">暗语：'+_passcode+'</div><div class="lock-msg" style="margin-top:8px;font-size:0.75rem">把这个暗语发给创建者<br>验证你是真想看第四层的人</div></div>'
             : '<div class="lock-screen" style="border-color:rgba(52,211,153,0.3)"><div class="lock-icon">🏁</div><div class="lock-msg" style="color:#34d399">探索者，先到这里吧。<br>你已经挖了 '+layer+' 层——够深了。</div></div>'}
       </div>
@@ -464,7 +471,7 @@ async function generate() {
   document.getElementById('bottomActions').style.display='none';
   btn.classList.add('loading'); btn.textContent='切骨中...'; loading.classList.add('active');
 
-  _passcode = getPasscode(); // 新会话新暗语
+  if(!_restored) _passcode = getPasscode(); // 新会话新暗语；续命链接保留原暗语
 
   try {
     let data = getDemo(topic), source = 'demo';
@@ -511,6 +518,9 @@ function retry() {
   document.getElementById('bottomActions').style.display='none';
   document.getElementById('statsBar').classList.remove('active');
   _sc=0;_ec=0;_dc=0; localStorage.setItem('ch_sc','0');localStorage.setItem('ch_ec','0');localStorage.setItem('ch_dc','0');
+  _restored=false; _maxFreeLayers=3;
+  document.querySelector('.title').textContent='认知抓手';
+  document.querySelector('.subtitle').innerHTML='扔一个领域进来，秒出三块入门骨架<br>点开还能往下挖';
   upStats(); window.scrollTo({top:0,behavior:'smooth'});
 }
 
