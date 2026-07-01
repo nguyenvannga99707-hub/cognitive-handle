@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- v4.2-bust -->
+<!DOCTYPE html><!-- v4.3 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -239,6 +239,21 @@ async function log(type, p) {
 }
 upStats();
 
+// ====== 演示数据（必须在所有函数之前） ======
+const DEMOS = {
+  '魔方':{topic:'魔方',blocks:[
+    {title:'扭',why:'不会扭，魔方就是一块塑料。四种基本手法是所有公式的原子',type:'能力',detail:'往上/往下/顺/逆——四手法组合出所有公式。手熟了，看教程不需要反复暂停'},
+    {title:'辨色',why:'分不清颜色，连"拼好了"都判断不了',type:'能力',detail:'六色相对位置：红对橙、白对黄、蓝对绿。余光一扫就知道下一步往哪转'},
+    {title:'分块',why:'不知道角块边块，公式为什么这样转都理解不了',type:'知识',detail:'角块(3面8个)+边块(2面12个)+中心块(固定)。分清楚后不是"把红色转到上面"而是"把红蓝白角块归位"'}
+  ],ability_alert:'手感——公式可背，但手指自己记住"这个状态该这么转"只能靠反复拧'},
+  '健身':{topic:'健身',blocks:[
+    {title:'开器械',why:'不会开跑步机，你连健身房的门都进不了',type:'知识',detail:'跑步机的启停调速、固定器械插销——5分钟能学会，但新手不敢问'},
+    {title:'做对动作',why:'动作不对=白练+受伤',type:'能力',detail:'深蹲膝盖不内扣、硬拉背不弓。看100个视频不如照镜子练——只有身体知道"什么是对"'},
+    {title:'渐进超负荷',why:'不知道这个，练三个月同重量然后觉得"健身没用"',type:'知识',detail:'每次多做1个/多加重2.5kg。不是努力是系统'}
+  ],ability_alert:'本体感觉——感受不到目标肌群收缩，动作就是空的'}
+};
+function getDemo(t){const k=Object.keys(DEMOS).find(x=>t.includes(x));return k?DEMOS[k]:null;}
+
 // ====== DeepSeek API ======
 const _dk='sk-'+atob('Mzk0ZGQ3ZmEyZmQ5NDdkZWFlZTk5MDRmZjFlMGY1Mjg=');
 
@@ -335,22 +350,6 @@ async function callAI(topic, context) {
   if(!m) throw new Error('No JSON in response: '+raw.slice(0,100));
   return JSON.parse(m[0]);
 }
-
-// ====== 演示数据 ======
-const DEMOS = {
-  '魔方':{topic:'魔方',blocks:[
-    {title:'扭',why:'不会扭，魔方就是一块塑料。四种基本手法是所有公式的原子',type:'能力',detail:'往上/往下/顺/逆——四手法组合出所有公式。手熟了，看教程不需要反复暂停'},
-    {title:'辨色',why:'分不清颜色，连"拼好了"都判断不了',type:'能力',detail:'六色相对位置：红对橙、白对黄、蓝对绿。余光一扫就知道下一步往哪转'},
-    {title:'分块',why:'不知道角块边块，公式为什么这样转都理解不了',type:'知识',detail:'角块(3面8个)+边块(2面12个)+中心块(固定)。分清楚后不是"把红色转到上面"而是"把红蓝白角块归位"'}
-  ],ability_alert:'手感——公式可背，但手指自己记住"这个状态该这么转"只能靠反复拧'},
-  '健身':{topic:'健身',blocks:[
-    {title:'开器械',why:'不会开跑步机，你连健身房的门都进不了',type:'知识',detail:'跑步机的启停调速、固定器械插销——5分钟能学会，但新手不敢问'},
-    {title:'做对动作',why:'动作不对=白练+受伤',type:'能力',detail:'深蹲膝盖不内扣、硬拉背不弓。看100个视频不如照镜子练——只有身体知道"什么是对"'},
-    {title:'渐进超负荷',why:'不知道这个，练三个月同重量然后觉得"健身没用"',type:'知识',detail:'每次多做1个/多加重2.5kg。不是努力是系统'}
-  ],ability_alert:'本体感觉——感受不到目标肌群收缩，动作就是空的'}
-};
-
-function getDemo(t){const k=Object.keys(DEMOS).find(x=>t.includes(x));return k?DEMOS[k]:null;}
 
 // ====== 生成 passcode ======
 function getPasscode(){return 'CH'+Math.random().toString(36).slice(2,8).toUpperCase();}
@@ -493,7 +492,9 @@ async function generate() {
   } catch(e) {
       // 记录失败原因
       log('search_error',{topic,error_msg:e.message||'unknown',source:'api'});
-      const fb = getDemo(topic) || {topic,blocks:[
+      let fb = null;
+      try { fb = getDemo(topic); } catch(e2) { console.warn('fallback DEMOS fail:', e2.message); }
+      fb = fb || {topic,blocks:[
         {title:'基础操作',why:'不会动手，连第一步都迈不出去',type:'知识',detail:'先搞清楚最基本的互动方式——工具就打开它，技能就做第一个动作'},
         {title:'核心概念',why:'不知道它"长什么样"，跟AI都没法对话',type:'知识',detail:'用一句话说清这个领域在解决什么问题。说不清就是没摸到门'},
         {title:'反馈信号',why:'没有判断标准，做对了你都不知道',type:'能力',detail:'找个你能感知的"做对了"的信号——声音、颜色变化、数字变动。这才是你的导航系统'}
