@@ -262,7 +262,9 @@ async function callAI(topic, context) {
   为什么：为什么这样做。
   怎么做：操作细节。第三块必须是一个高潮——用户看完觉得"我知道了！"——然后戛然而止。这就是寸止。`;
 
-  const firstLayerPrompt = `领域：${topic}
+  function getPrompt() {
+    if (!context || layer === 1) {
+      return `领域：${topic}
 
 第一层——扔3个坑。
 
@@ -276,8 +278,9 @@ async function callAI(topic, context) {
 三块坑必须递进：第一块门槛最低的坑，第三块最要命的坑。
 
 输出JSON：{"topic":"${topic}","blocks":[{"title":"","why":"","detail":""}]}`;
-
-  const secondLayerPrompt = `领域：${topic}
+    }
+    if (layer === 2) {
+      return `领域：${topic}
 用户踩了坑「${context.cardTitle}」（${context.why}）。
 
 第二层——给他3个支架，让他站稳别掉下去。
@@ -290,8 +293,8 @@ async function callAI(topic, context) {
 }
 
 输出JSON：{"blocks":[{"title":"","why":"","detail":""}]}`;
-
-  const thirdLayerPrompt = `领域：${topic}
+    }
+    return `领域：${topic}
 用户已经站稳了（基于「${context.cardTitle}」），需要往上走两步。
 
 第三层——给他3个实操步骤，让他真正能动手。
@@ -305,11 +308,9 @@ async function callAI(topic, context) {
 }
 
 输出JSON：{"blocks":[{"title":"","why":"","detail":""}]}`;
+  }
 
-  const prompt = !context ? firstLayerPrompt
-    : layer === 1 ? firstLayerPrompt
-    : layer === 2 ? secondLayerPrompt
-    : thirdLayerPrompt;
+  const prompt = getPrompt();
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${_dk}`},
     body:JSON.stringify({model:'deepseek-chat',messages:[
       {role:'system',content:SYSTEM},
