@@ -133,7 +133,15 @@
   .bottom-actions { margin-top: 16px; display: flex; gap: 12px; justify-content: center; }
   .btn-sm { padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2a3e;
     background: transparent; color: #a0a0b0; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
-  .btn-sm:hover { border-color: #6366f1; color: #c4b5fd; }
+  .error-banner { display: none; margin: 0 0 24px; padding: 14px 18px;
+    background: rgba(248,113,113,0.10); border: 1px solid rgba(248,113,113,0.35); border-radius: 12px;
+    font-size: 0.82rem; color: #fca5a5; line-height: 1.6; text-align: center; }
+  .error-banner.active { display: block; }
+  .error-banner .error-code { display: block; margin-top: 6px; font-family: monospace; font-size: 0.7rem;
+    color: rgba(248,113,113,0.5); }
+
+  .drill-btn.error { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.35); color: #f87171; }
+  .drill-btn.error:hover { background: rgba(248,113,113,0.18); }
 
   @media (max-width: 600px) { .title { font-size: 1.5rem; } .input-wrap { flex-direction: column; } .btn-go { width: 100%; } }
 </style>
@@ -153,6 +161,11 @@
 
   <div class="loading-indicator" id="loading">
     <span>在找坑</span><div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="error-banner" id="errBanner">
+    <span id="errMsg"></span>
+    <span class="error-code" id="errCode"></span>
   </div>
 
   <div class="result-wrap" id="result"></div>
@@ -221,8 +234,9 @@ let _restored = false;
           document.getElementById('topicInput').focus();
         }
       } catch(e) {
-        console.error('续命恢复失败:', e);
-        document.querySelector('.subtitle').innerHTML = `🔓 续命模式 · 第1-${unlock}层已解锁<br><span style="color:#f87171">未找到之前的探索记录，请手动输入话题</span>`;
+      console.error('续命恢复失败:', e);
+      showError('未能恢复之前的探索记录，请手动输入话题', 'RESTORE_FAIL');
+      document.querySelector('.subtitle').innerHTML = `🔓 续命模式 · 第1-${unlock}层已解锁<br><span style="color:#f87171">未找到之前的探索记录，请手动输入话题</span>`;
       }
     })();
   }
@@ -355,6 +369,16 @@ async function callAI(topic, context) {
 function getPasscode(){return 'CH'+Math.random().toString(36).slice(2,8).toUpperCase();}
 let _passcode = getPasscode();
 
+function showError(msg, code) {
+  const banner = document.getElementById('errBanner');
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('errCode').textContent = code ? '错误码：'+code : '';
+  banner.classList.add('active');
+  // 5秒后自动消失
+  clearTimeout(banner._hideTimer);
+  banner._hideTimer = setTimeout(() => banner.classList.remove('active'), 8000);
+}
+
 // ====== 渲染卡片 ======
 function renderCards(container, blocks, topic, layer, parentTitle, source) {
   blocks.forEach((b,i)=>{
@@ -452,7 +476,17 @@ async function drillDown(btn) {
       upStats();
     }
   } catch(e) {
-    log('drilldown_error',{topic, layer:layer+1, parent_card_title:cardTitle, error_msg:e.message||'unknown', source:'api'});
+    const errMsg = e.message || 'unknown';
+    log('drilldown_error',{topic, layer:layer+1, parent_card_title:cardTitle, error_msg:errMsg, source:'api'});
+    showError('往下挖时卡住了，截图发给创建者吧', 'DRILL_'+errMsg.slice(0,25));
+    btn.classList.add('error');
+    btn.textContent = '⚠️ 挖不动，点我重试';
+    btn.addEventListener('click', function retryDrill() {
+      btn.classList.remove('error');
+      btn.textContent = '🪜 再往下挖一层';
+      btn.removeEventListener('click', retryDrill);
+      drillDown(btn);
+    }, {once: true});
   } finally {
     btn.classList.remove('loading');
     btn.textContent = '🪜 再往下挖一层';
@@ -467,6 +501,7 @@ async function generate() {
   const btn = document.getElementById('btnGo'), loading = document.getElementById('loading'),
         result = document.getElementById('result'), mn = document.getElementById('metaNote');
   result.classList.remove('active'); result.innerHTML=''; mn.classList.remove('active');
+  document.getElementById('errBanner').classList.remove('active');
   document.getElementById('bottomActions').style.display='none';
   btn.classList.add('loading'); btn.textContent='切骨中...'; loading.classList.add('active');
 
@@ -490,8 +525,10 @@ async function generate() {
     upStats();
     document.getElementById('bottomActions').style.display='flex';
   } catch(e) {
-      // 记录失败原因
-      log('search_error',{topic,error_msg:e.message||'unknown',source:'api'});
+      // 记录失败原因 + 显示可见错误
+      const errMsg = e.message || 'unknown';
+      log('search_error',{topic,error_msg:errMsg,source:'api'});
+      showError('生成骨架时出了点问题，正在用备用数据顶一下', 'API_'+errMsg.slice(0,30));
       let fb = null;
       try { fb = getDemo(topic); } catch(e2) { console.warn('fallback DEMOS fail:', e2.message); }
       fb = fb || {topic,blocks:[
