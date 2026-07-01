@@ -34,7 +34,7 @@ for name,pat in [
     ('showError函数', 'function showError'),
     ('drill失败反馈"挖不动"', '\u6316\u4e0d\u52a8'),
     ('passcode守卫!_restored', '!_restored'),
-    ('DEMOS在函数之前', '\u5fc5\u987b\u5728\u6240\u6709\u51fd\u6570\u4e4b\u524d'),
+    ('DEMOS声明', 'const DEMOS'),
     ('续命锁屏跳过', '_restored ? layer <='),
     ('catch安全getDemo', 'catch(e2)'),
     ('finally不覆盖error', "btn.classList.contains('error')"),
@@ -42,6 +42,12 @@ for name,pat in [
     ('Supabase URL', 'huxjrjovoxwoolxmdgub'),
 ]:
     check(name, pat in html)
+
+# 额外验证：DEMOS和_dk必须在IIFE(setTimeout)之前初始化
+if 'const DEMOS' in html and 'URL 参数检测' in html:
+    check('  DEMOS在IIFE之前(位置)', html.index('const DEMOS') < html.index('URL 参数检测'))
+if 'const _dk' in html and 'URL 参数检测' in html:
+    check('  _dk在IIFE之前(位置)', html.index('const _dk') < html.index('URL 参数检测'))
 
 # ====== 2. JS语法 ======
 print("\n===== JS语法 =====")
